@@ -16,7 +16,7 @@ var threshold = []uint{
 }
 
 type HyperLogLogPlus struct {
-	reg        []uint8
+	Reg        []uint8
 	p          uint8
 	m          uint32
 	sparse     bool
@@ -124,17 +124,17 @@ func (h *HyperLogLogPlus) Clear() {
 	h.sparse = true
 	h.tmpSet = set{}
 	h.sparseList = newCompressedList(int(h.m))
-	h.reg = nil
+	h.Reg = nil
 }
 
 // ToNormal converts HyperLogLogPlus h to the normal representation from the sparse
 // representation.
 func (h *HyperLogLogPlus) ToNormal() {
-	h.reg = make([]uint8, h.m)
+	h.Reg = make([]uint8, h.m)
 	for iter := h.sparseList.Iter(); iter.HasNext(); {
 		i, r := h.decodeHash(iter.Next())
-		if h.reg[i] < r {
-			h.reg[i] = r
+		if h.Reg[i] < r {
+			h.Reg[i] = r
 		}
 	}
 
@@ -154,8 +154,8 @@ func (h *HyperLogLogPlus) Add(item Hash64) {
 		w := x<<h.p | 1<<(h.p-1) // {x63-p,...,x0}
 
 		zeroBits := clz64(w) + 1
-		if zeroBits > h.reg[i] {
-			h.reg[i] = zeroBits
+		if zeroBits > h.Reg[i] {
+			h.Reg[i] = zeroBits
 		}
 	}
 }
@@ -184,21 +184,21 @@ func (h *HyperLogLogPlus) Merge(other *HyperLogLogPlus) error {
 	if other.sparse {
 		for k := range other.tmpSet {
 			i, r := other.decodeHash(k)
-			if r > h.reg[i] {
-				h.reg[i] = r
+			if r > h.Reg[i] {
+				h.Reg[i] = r
 			}
 		}
 
 		for iter := other.sparseList.Iter(); iter.HasNext(); {
 			i, r := other.decodeHash(iter.Next())
-			if r > h.reg[i] {
-				h.reg[i] = r
+			if r > h.Reg[i] {
+				h.Reg[i] = r
 			}
 		}
 	} else {
-		for i, v := range other.reg {
-			if v > h.reg[i] {
-				h.reg[i] = v
+		for i, v := range other.Reg {
+			if v > h.Reg[i] {
+				h.Reg[i] = v
 			}
 		}
 	}
@@ -246,12 +246,12 @@ func (h *HyperLogLogPlus) Count() uint64 {
 		return uint64(linearCounting(mPrime, mPrime-uint32(h.sparseList.Count)))
 	}
 
-	est := calculateEstimate(h.reg)
+	est := calculateEstimate(h.Reg)
 	if est <= float64(h.m)*5.0 {
 		est -= h.estimateBias(est)
 	}
 
-	if v := countZeros(h.reg); v != 0 {
+	if v := countZeros(h.Reg); v != 0 {
 		lc := linearCounting(h.m, v)
 		if lc <= float64(threshold[h.p-4]) {
 			return uint64(lc)
@@ -264,7 +264,7 @@ func (h *HyperLogLogPlus) Count() uint64 {
 func (h *HyperLogLogPlus) GobEncode() ([]byte, error) {
 	buf := bytes.Buffer{}
 	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(h.reg); err != nil {
+	if err := enc.Encode(h.Reg); err != nil {
 		return nil, err
 	}
 	if err := enc.Encode(h.m); err != nil {
@@ -296,7 +296,7 @@ func (h *HyperLogLogPlus) GobEncode() ([]byte, error) {
 // Decode gob into a HyperLogLogPlus structure
 func (h *HyperLogLogPlus) GobDecode(b []byte) error {
 	dec := gob.NewDecoder(bytes.NewBuffer(b))
-	if err := dec.Decode(&h.reg); err != nil {
+	if err := dec.Decode(&h.Reg); err != nil {
 		return err
 	}
 	if err := dec.Decode(&h.m); err != nil {
