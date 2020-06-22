@@ -200,6 +200,19 @@ func (h *HLLPP) Merge(other *HLLPP) error {
 	return nil
 }
 
+// GetData returns underlying data.
+// It returns `sparseLength == -1` if DENSE representation is used.
+// It returns internal data pointer, so it must be copied
+// before any further calls to this HLLPP instance
+// or if it is going to be mutated.
+func (h *HLLPP) GetData() (data []byte, sparseLength int64) {
+	sparseLength = int64(h.sparseLength)
+	if !h.sparse {
+		sparseLength = -1
+	}
+	return h.data, sparseLength
+}
+
 func (h *HLLPP) toNormal() {
 	if !h.sparse {
 		return
