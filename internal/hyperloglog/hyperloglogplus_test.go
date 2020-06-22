@@ -21,7 +21,7 @@ func abs(x int64) int64 {
 
 func TestHLLPPAddNoSparse(t *testing.T) {
 	h, _ := NewPlus(16)
-	h.ToNormal()
+	h.toNormal()
 
 	h.Add(fakeHash64(0x00010fffffffffff))
 	n := h.Reg[1]
@@ -62,7 +62,7 @@ func TestHLLPPAddNoSparse(t *testing.T) {
 
 func TestHLLPPPrecisionNoSparse(t *testing.T) {
 	h, _ := NewPlus(4)
-	h.ToNormal()
+	h.toNormal()
 
 	h.Add(fakeHash64(0x1fffffffffffffff))
 	n := h.Reg[1]
@@ -83,17 +83,17 @@ func TestHLLPPPrecisionNoSparse(t *testing.T) {
 	}
 }
 
-func TestHLLPPToNormal(t *testing.T) {
+func TestHLLPPtoNormal(t *testing.T) {
 	h, _ := NewPlus(16)
 	h.Add(fakeHash64(0x00010fffffffffff))
-	h.mergeSparseAndToNormal()
+	h.mergeSparseAndtoNormal()
 	c := h.Count()
 	if c != 1 {
 		t.Error(c)
 	}
 
 	if h.sparse {
-		t.Error("ToNormal should convert to normal")
+		t.Error("toNormal should convert to normal")
 	}
 
 	h, _ = NewPlus(16)
@@ -103,7 +103,7 @@ func TestHLLPPToNormal(t *testing.T) {
 	h.Add(fakeHash64(0x0003000000000001))
 	h.Add(fakeHash64(0xff03700000000000))
 	h.Add(fakeHash64(0xff03080000000000))
-	h.mergeSparseAndToNormal()
+	h.mergeSparseAndtoNormal()
 
 	n := h.Reg[1]
 	if n != 5 {
@@ -231,7 +231,7 @@ func TestHLLMergeSparse(t *testing.T) {
 
 func TestHLLMergeNormal(t *testing.T) {
 	h, _ := NewPlus(16)
-	h.ToNormal()
+	h.toNormal()
 	h.Add(fakeHash64(0x00010fffffffffff))
 	h.Add(fakeHash64(0x00020fffffffffff))
 	h.Add(fakeHash64(0x00030fffffffffff))
@@ -240,7 +240,7 @@ func TestHLLMergeNormal(t *testing.T) {
 	h.Add(fakeHash64(0x00050fffffffffff))
 
 	h2, _ := NewPlus(16)
-	h2.ToNormal()
+	h2.toNormal()
 	h2.Merge(h)
 	n := h2.Count()
 	if n != 5 {
@@ -281,7 +281,7 @@ func TestHLLMergeMixed(t *testing.T) {
 	h.Add(fakeHash64(0x00050fffffffffff))
 
 	h2, _ := NewPlus(16)
-	h2.ToNormal()
+	h2.toNormal()
 	h2.Merge(h)
 	n := h2.Count()
 	if n != 5 {
@@ -316,7 +316,7 @@ func TestHLLMergeMixed(t *testing.T) {
 	}
 }
 
-func TestHLLMergeMixedConvertToNormal(t *testing.T) {
+func TestHLLMergeMixedConverttoNormal(t *testing.T) {
 	h, _ := NewPlus(16)
 	h.Add(fakeHash64(0x00010fffffffffff))
 	h.Add(fakeHash64(0x00020fffffffffff))
@@ -325,7 +325,7 @@ func TestHLLMergeMixedConvertToNormal(t *testing.T) {
 	h.Add(fakeHash64(0x00050fffffffffff))
 	h.Add(fakeHash64(0x00050fffffffffff))
 	// h is normal, h2 should be converted too.
-	h.mergeSparseAndToNormal()
+	h.mergeSparseAndtoNormal()
 
 	h2, _ := NewPlus(16)
 	h2.Merge(h)
@@ -544,7 +544,7 @@ func TestHLLPPGob(t *testing.T) {
 
 func TestHLLPPEstimateBiasCount(t *testing.T) {
 	h, _ := NewPlus(4)
-	h.ToNormal()
+	h.toNormal()
 
 	// Adding ten entries in different buckets for p=4 skips linear counting.
 	for i := 0; i < 10; i++ {
@@ -557,7 +557,7 @@ func TestHLLPPEstimateBiasCount(t *testing.T) {
 	}
 }
 
-func TestHLLPPToNormalWhenSparseIsTooBig(t *testing.T) {
+func TestHLLPPtoNormalWhenSparseIsTooBig(t *testing.T) {
 	h, _ := NewPlus(4)
 
 	for i := 0; i < 16; i++ {
@@ -574,7 +574,7 @@ func TestHLLPPToNormalWhenSparseIsTooBig(t *testing.T) {
 	}
 }
 
-func TestHLLPPToNormalWhenCountIsCalledOften(t *testing.T) {
+func TestHLLPPtoNormalWhenCountIsCalledOften(t *testing.T) {
 	h, _ := NewPlus(7)
 
 	for i := 0; i < 128; i++ {
