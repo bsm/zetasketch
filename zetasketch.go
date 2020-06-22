@@ -3,6 +3,9 @@
 package zetasketch
 
 import (
+	"encoding/base64"
+	"errors"
+
 	"github.com/bsm/zetasketch/internal/fingerprint"
 	"github.com/bsm/zetasketch/internal/hyperloglog"
 	"github.com/bsm/zetasketch/internal/zetasketch"
@@ -79,6 +82,28 @@ func (a *HLL) Marshal() ([]byte, error) {
 
 	return proto.Marshal(aggState)
 }
+
+// MarshalJSON serializes aggregator to JSON.
+func (a *HLL) MarshalJSON() ([]byte, error) {
+	data, err := a.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	enc := base64.StdEncoding
+	n := enc.EncodedLen(len(data))
+	buf := make([]byte, n+2) // base64 data + two double quotes
+	buf[0], buf[n+1] = '"', '"'
+	enc.Encode(buf[1:], data)
+	return buf, nil
+}
+
+// UnmarshalJSON is a dummy method - unmarshaling from JSON is not supported.
+func (a *HLL) UnmarshalJSON([]byte) error {
+	return errors.New("marshalling HLL aggregator from JSON is not supported")
+}
+
+// ----------------------------------------------------------------------------
 
 type hasher []byte
 
