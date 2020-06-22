@@ -3,13 +3,9 @@
 package zetasketch
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/bsm/zetasketch/internal/fingerprint"
-
+	"github.com/bsm/zetasketch/internal/hyperloglog"
 	"github.com/bsm/zetasketch/internal/zetasketch"
-	"github.com/clarkduvall/hyperloglog"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -64,10 +60,7 @@ func (a *HLL) Clear() {
 
 // Marshal marshals an aggregator to a binary proto message (raw bytes, not base64 encoded).
 func (a *HLL) Marshal() ([]byte, error) {
-	reg, err := hackExtractReg(a.hll)
-	if err != nil {
-		return nil, err
-	}
+	a.hll.ToNormal() // force normal (dense) representation
 
 	aggState := &zetasketch.AggregatorStateProto{
 		Type:            &hllAggregatorType,
@@ -79,26 +72,12 @@ func (a *HLL) Marshal() ([]byte, error) {
 		SparseSize:                  nil, // we do not support sparse (yet)
 		PrecisionOrNumBuckets:       &a.precision,
 		SparsePrecisionOrNumBuckets: nil, // we do not support sparse (yet)
-		Data:                        reg,
+		Data:                        a.hll.Reg,
 		SparseData:                  nil, // we do not support sparse (yet)
 	}
 	proto.SetExtension(aggState, zetasketch.E_HyperloglogplusUniqueState, hllState)
 
 	return proto.Marshal(aggState)
-}
-
-// TODO: maybe fork hyperloglog and expose reg?
-func hackExtractReg(hll *hyperloglog.HyperLogLogPlus) ([]byte, error) {
-	data, err := hll.GobEncode()
-	if err != nil {
-		return nil, err
-	}
-
-	var reg []byte
-	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&reg); err != nil {
-		return nil, err
-	}
-	return reg, nil
 }
 
 type hasher []byte
