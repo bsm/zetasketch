@@ -9,6 +9,10 @@
 //
 // HyperLogLog++ is described here:
 // http://research.google.com/pubs/pub40671.html
+//
+// Original copyright by Clark DuVall
+// MIT Licence
+// See https://github.com/clarkduvall/hyperloglog
 package hyperloglog
 
 import (
