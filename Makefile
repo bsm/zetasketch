@@ -11,7 +11,7 @@ proto: \
 	internal/zetasketch/hllplus-unique.proto \
 	internal/zetasketch/aggregator.proto \
 	internal/zetasketch/unique-stats.proto \
-	internal/google/protobuf/descriptor.proto \
+	internal/protobuf/google/protobuf/descriptor.proto \
 	\
 	internal/zetasketch/hllplus-unique.pb.go \
 	internal/zetasketch/aggregator.pb.go \
@@ -20,8 +20,8 @@ proto: \
 internal/zetasketch/%.pb.go: internal/zetasketch/%.proto
 		@mkdir -p $(dir $@)
 		protoc \
-			-I=internal:internal/zetasketch \
-			--go_out=internal \
+			-I=internal/protobuf:internal/zetasketch \
+			--go_out=internal/zetasketch \
 			--go_opt=paths=source_relative \
 			$<
 
@@ -29,6 +29,6 @@ internal/zetasketch/%.proto:
 	@mkdir -p $(dir $@)
 	curl -so $@ https://raw.githubusercontent.com/google/zetasketch/master/proto/$*.proto
 
-internal/google/protobuf/descriptor.proto:
+internal/protobuf/google/protobuf/descriptor.proto:
 	@mkdir -p $(dir $@)
 	curl -so $@ https://raw.githubusercontent.com/protocolbuffers/protobuf/master/src/google/protobuf/descriptor.proto \
