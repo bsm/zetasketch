@@ -92,14 +92,14 @@ func (h *HyperLogLogPlus) mergeSparse() {
 	h.tmpSet = set{}
 
 	if uint32(h.sparseList.Len()) > h.m {
-		h.toNormal()
+		h.ToNormal()
 	}
 }
 
 func (h *HyperLogLogPlus) mergeSparseAndToNormal() {
 	h.mergeSparse()
 	if h.sparse {
-		h.toNormal()
+		h.ToNormal()
 	}
 }
 
@@ -127,9 +127,9 @@ func (h *HyperLogLogPlus) Clear() {
 	h.reg = nil
 }
 
-// Converts HyperLogLogPlus h to the normal representation from the sparse
+// ToNormal converts HyperLogLogPlus h to the normal representation from the sparse
 // representation.
-func (h *HyperLogLogPlus) toNormal() {
+func (h *HyperLogLogPlus) ToNormal() {
 	h.reg = make([]uint8, h.m)
 	for iter := h.sparseList.Iter(); iter.HasNext(); {
 		i, r := h.decodeHash(iter.Next())
