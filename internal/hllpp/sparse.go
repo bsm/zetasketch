@@ -75,9 +75,8 @@ func (writer *sparseWriter) Append(k, idx uint32, rho uint8) {
 				writer.currVal = k
 			}
 			return
-		} else {
-			writer.commit()
 		}
+		writer.commit()
 	}
 
 	writer.hasCurrVal = true
@@ -206,7 +205,6 @@ func (h *HLLPP) decodeHash(k uint32, p uint8) (_ uint32, r uint8) {
 func (h *HLLPP) getIndex(k uint32, p uint8) uint32 {
 	if k&1 > 0 {
 		return sliceBits32(k, 6+h.pp, 1+6+h.pp-p)
-	} else {
-		return sliceBits32(k, h.pp, 1+h.pp-p)
 	}
+	return sliceBits32(k, h.pp, 1+h.pp-p)
 }

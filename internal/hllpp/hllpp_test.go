@@ -275,10 +275,6 @@ func uint32ToBits(i uint32) string {
 	return strings.TrimLeft(strconv.FormatUint(uint64(i), 2), "0")
 }
 
-func uint64ToBits(i uint64) string {
-	return strings.TrimLeft(strconv.FormatUint(i, 2), "0")
-}
-
 func TestEncodeDecodeHash(t *testing.T) {
 	h, _ := NewWithConfig(Config{SparsePrecision: 25})
 

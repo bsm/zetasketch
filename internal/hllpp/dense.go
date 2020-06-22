@@ -41,18 +41,16 @@ func getRegister(data []byte, bitsPerRegister, idx uint32) uint8 {
 	byteOffset := bitIdx / 8
 	bitOffset := bitIdx % 8
 
+	// all fit in first byte
 	if 8-bitOffset >= bitsPerRegister {
-		// all fit in first byte
 		return (data[byteOffset] >> (8 - bitOffset - bitsPerRegister)) & byte(mask(bitsPerRegister, 0))
-	} else {
-		// spread over two bytes
-
-		numBitsInFirstByte := bitsPerRegister - (8 - bitOffset)
-
-		rho := data[byteOffset] << numBitsInFirstByte
-		rho |= data[byteOffset+1] >> (8 - numBitsInFirstByte)
-		return rho & byte(mask(bitsPerRegister, 0))
 	}
+
+	// spread over two bytes
+	numBitsInFirstByte := bitsPerRegister - (8 - bitOffset)
+	rho := data[byteOffset] << numBitsInFirstByte
+	rho |= data[byteOffset+1] >> (8 - numBitsInFirstByte)
+	return rho & byte(mask(bitsPerRegister, 0))
 }
 
 func alpha(m uint32) float64 {

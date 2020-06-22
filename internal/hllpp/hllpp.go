@@ -1,7 +1,7 @@
 // Copyright (c) 2018, RetailNext, Inc.
 // All rights reserved.
 
-// hllpp implements the HyperLogLog++ cardinality estimator as specified
+// Package hllpp implements the HyperLogLog++ cardinality estimator as specified
 // in the HyperLogLog++ paper http://goo.gl/Z5Sqgu. hllpp uses a built-in
 // non-streaming implementation of murmur3 to hash data as you add it to
 // the estimator.
