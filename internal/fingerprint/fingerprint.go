@@ -17,6 +17,8 @@ const (
 )
 
 // Hash64 computes a hash of data.
+//
+// WARNING: it supports data with up to 32 bytes for now. Will panic if data is larger.
 func Hash64(data []byte) uint64 {
 	/*
 		Java implementation looks like this:
