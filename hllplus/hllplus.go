@@ -72,7 +72,7 @@ func (s *HLL) Estimate() uint64 {
 	if numZeros != 0 {
 		h := m * math.Log(m/float64(numZeros))
 		if int(h) <= linearCountingThreshold(s.p) {
-			return uint64(math.Round(h))
+			return uint64(h + 0.5)
 		}
 	}
 
@@ -82,5 +82,5 @@ func (s *HLL) Estimate() uint64 {
 	// Perform bias correction on small estimates. HyperLogLogPlusPlusData only contains bias
 	// estimates for small cardinalities and returns 0 for anything else, so the "E < 5m" guard from
 	// the HLL++ paper (https://goo.gl/pc916Z) is superfluous here.
-	return uint64(math.Round(raw - estimateBias(raw, s.p)))
+	return uint64(raw - estimateBias(raw, s.p) + 0.5)
 }
