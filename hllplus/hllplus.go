@@ -70,9 +70,9 @@ func (s *HLL) Estimate() uint64 {
 	x := 1 << s.p
 	m := float64(x)
 	if numZeros != 0 {
-		h := m * math.Log(m/float64(numZeros))
-		if int(h) <= linearCountingThreshold(s.p) {
-			return uint64(h + 0.5)
+		n := uint64(m*math.Log(m/float64(numZeros)) + 0.5)
+		if n <= linearCountingThreshold(s.p) {
+			return n
 		}
 	}
 

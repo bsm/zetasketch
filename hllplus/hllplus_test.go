@@ -14,6 +14,26 @@ var _ = Describe("HLL", func() {
 	var subject *hllplus.HLL
 	var rnd *rand.Rand
 
+	DescribeTable("dense (800 unique)",
+		func(p int, exp int) {
+			subject, _ = hllplus.New(uint8(p), 20)
+			rnd = rand.New(rand.NewSource(33))
+			for i := 0; i < 800; i++ {
+				subject.Add(rnd.Uint64())
+			}
+			Expect(subject.Estimate()).To(Equal(uint64(exp)))
+		},
+		Entry("p=10", 10, 800),
+		Entry("p=11", 11, 794),
+		Entry("p=12", 12, 788),
+		Entry("p=13", 13, 793),
+		Entry("p=14", 14, 791),
+		Entry("p=15", 15, 793),
+		Entry("p=16", 16, 795),
+		Entry("p=17", 17, 797),
+		Entry("p=18", 18, 799),
+	)
+
 	DescribeTable("dense (200k unique)",
 		func(p int, exp int) {
 			subject, _ = hllplus.New(uint8(p), 20)

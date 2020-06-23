@@ -743,7 +743,7 @@ func closestBiases(estimate float64, precision uint8) weightedBiases {
 }
 
 // The empirically determined thresholds for when to apply LinearCounting instead of HyperLogLog.
-var linearCountingThresholds = []int{
+var linearCountingThresholds = []uint64{
 	900,    // precision 10
 	1800,   // precision 11
 	3100,   // precision 12
@@ -763,7 +763,7 @@ var linearCountingThresholds = []int{
  * paper (https://goo.gl/pc916Z) for details.
  *
  */
-func linearCountingThreshold(precision uint8) int {
+func linearCountingThreshold(precision uint8) uint64 {
 	if minDataPrecision <= precision && precision <= maxDataPrecision {
 		return linearCountingThresholds[precision-minDataPrecision]
 	}
