@@ -178,3 +178,11 @@ func validate(precision, sparsePrecision uint8) error {
 	}
 	return nil
 }
+
+// GetData exposes underlying binary sketch.
+//
+// `sparseSize` is returned as `-1` if internal representation is dense.
+func (s *HLL) GetData() (data []byte, sparseSize int32) {
+	// TODO: alter this when sparse representation is implemented
+	return s.dense, -1
+}
