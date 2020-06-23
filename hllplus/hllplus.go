@@ -3,6 +3,15 @@ package hllplus
 import (
 	"fmt"
 	"math"
+
+	pb "github.com/bsm/zetasketch/internal/zetasketch"
+	"google.golang.org/protobuf/proto"
+)
+
+// Proto-related global vars (Go cannot take pointers of consts).
+var (
+	hllEncodingVersion int32 = 2
+	hllAggregatorType        = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
 )
 
 // HLL is a HyperLogLog++ sketch implementation.
@@ -11,6 +20,8 @@ type HLL struct {
 
 	precision       uint8
 	sparsePrecision uint8
+
+	additions int64
 }
 
 // New inits a new sketch.
@@ -46,6 +57,8 @@ func (s *HLL) Add(hash uint64) {
 	if rho > s.normal[pos] {
 		s.normal[pos] = rho
 	}
+
+	s.additions++
 }
 
 // Merge merges other into s.
@@ -179,10 +192,34 @@ func validate(precision, sparsePrecision uint8) error {
 	return nil
 }
 
-// GetData exposes underlying binary sketch.
-//
-// `sparseSize` is returned as `-1` if internal representation is dense.
-func (s *HLL) GetData() (data []byte, sparseSize int32) {
-	// TODO: alter this when sparse representation is implemented
-	return s.dense, -1
+// Proto builds a BigQuery-compatible protobuf message, representing HLL aggregator state.
+func (s *HLL) Proto() proto.Message {
+	aggState := &pb.AggregatorStateProto{
+		Type:            &hllAggregatorType, // fixed/constant
+		NumValues:       &s.additions,
+		EncodingVersion: &hllEncodingVersion, // fixed/constant
+		ValueType:       nil,                 // looks to be a type of values being added - strings, bytes, ints etc - I think, can be omitted (may need to check though)
+	}
+
+	var hllState *pb.HyperLogLogPlusUniqueStateProto
+	if false { // TODO: handle sparse
+		// sparse:
+		size := int32(0) // TODO: handle sparse size
+		precision := int32(s.sparsePrecision)
+		hllState = &pb.HyperLogLogPlusUniqueStateProto{
+			SparseSize:                  &size,
+			SparsePrecisionOrNumBuckets: &precision,
+			SparseData:                  nil, // TODO: use sparse data
+		}
+	} else {
+		// dense:
+		precision := int32(s.precision)
+		hllState = &pb.HyperLogLogPlusUniqueStateProto{
+			PrecisionOrNumBuckets: &precision,
+			Data:                  s.normal,
+		}
+	}
+	proto.SetExtension(aggState, pb.E_HyperloglogplusUniqueState, hllState)
+
+	return aggState
 }

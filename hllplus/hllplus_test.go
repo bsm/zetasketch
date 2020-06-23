@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"github.com/bsm/zetasketch/hllplus"
+	pb "github.com/bsm/zetasketch/internal/zetasketch"
+	"google.golang.org/protobuf/proto"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -158,6 +161,32 @@ var _ = Describe("HLL", func() {
 			Expect(s3.Precision()).To(Equal(uint8(12)))
 			Expect(s3.SparsePrecision()).To(Equal(uint8(17)))
 		})
+	})
+
+	It("should return proto", func() {
+		subject, _ := hllplus.New(19, 20)
+		Expect(subject.Proto())
+
+		subject.Add(1)
+		subject.Add(2)
+		subject.Add(1)
+
+		msg := subject.Proto().(*pb.AggregatorStateProto)
+		Expect(*msg.Type).To(Equal(pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE))
+		Expect(*msg.NumValues).To(BeNumerically("==", 3))
+		Expect(*msg.EncodingVersion).To(BeNumerically("==", 2))
+		Expect(msg.ValueType).To(BeNil())
+
+		ext := proto.GetExtension(msg, pb.E_HyperloglogplusUniqueState).(*pb.HyperLogLogPlusUniqueStateProto)
+
+		// expect dense representation:
+		Expect(*ext.PrecisionOrNumBuckets).To(BeNumerically("==", 19))
+		Expect(ext.Data).NotTo(BeEmpty()) // TODO: maybe better check exact value?
+
+		// expect NO sparse representation:
+		Expect(ext.SparseSize).To(BeNil())
+		Expect(ext.SparsePrecisionOrNumBuckets).To(BeNil())
+		Expect(ext.SparseData).To(BeNil())
 	})
 })
 
