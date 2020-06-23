@@ -14,10 +14,13 @@ var _ = Describe("HLL", func() {
 	var subject *hllplus.HLL
 	var rnd *rand.Rand
 
-	DescribeTable("dense (800 unique)",
+	BeforeEach(func() {
+		rnd = rand.New(rand.NewSource(33))
+	})
+
+	DescribeTable("estimate normal (800 unique)",
 		func(p int, exp int) {
 			subject, _ = hllplus.New(uint8(p), 20)
-			rnd = rand.New(rand.NewSource(33))
 			for i := 0; i < 800; i++ {
 				subject.Add(rnd.Uint64())
 			}
@@ -34,10 +37,9 @@ var _ = Describe("HLL", func() {
 		Entry("p=18", 18, 799),
 	)
 
-	DescribeTable("dense (200k unique)",
+	DescribeTable("estimate normal (200k unique)",
 		func(p int, exp int) {
 			subject, _ = hllplus.New(uint8(p), 20)
-			rnd = rand.New(rand.NewSource(33))
 			for i := 0; i < 200_000; i++ {
 				subject.Add(rnd.Uint64())
 			}
@@ -60,10 +62,9 @@ var _ = Describe("HLL", func() {
 		Entry("p=24", 24, 200026),
 	)
 
-	DescribeTable("dense (100k unique + 2x50k)",
+	DescribeTable("estimate normal (100k unique + 2x50k)",
 		func(p int, exp int) {
 			subject, _ = hllplus.New(uint8(p), 20)
-			rnd = rand.New(rand.NewSource(33))
 			for i := 0; i < 100_000; i++ {
 				subject.Add(rnd.Uint64())
 			}
@@ -90,6 +91,74 @@ var _ = Describe("HLL", func() {
 		Entry("p=23", 23, 149946),
 		Entry("p=24", 24, 149988),
 	)
+
+	It("should downgrade", func() {
+		s1, _ := hllplus.New(15, 20)
+		s2, _ := hllplus.New(12, 17)
+
+		for i := 0; i < 100_000; i++ {
+			n := rnd.Uint64()
+			s1.Add(n)
+			s2.Add(n)
+		}
+
+		Expect(s1.Estimate()).To(Equal(uint64(99879)))
+		Expect(s2.Estimate()).To(Equal(uint64(100680)))
+
+		Expect(s1.Precision()).To(Equal(uint8(15)))
+		Expect(s1.SparsePrecision()).To(Equal(uint8(20)))
+		Expect(s1.Downgrade(12, 17)).To(Succeed())
+		Expect(s1.Precision()).To(Equal(uint8(12)))
+		Expect(s1.SparsePrecision()).To(Equal(uint8(17)))
+
+		Expect(s1.Estimate()).To(Equal(uint64(100680)))
+		Expect(s2.Estimate()).To(Equal(uint64(100680)))
+	})
+
+	Describe("merge", func() {
+		var s1, s2, s3 *hllplus.HLL
+
+		BeforeEach(func() {
+			s1, _ = hllplus.New(15, 20)
+			s2, _ = hllplus.New(15, 20)
+			s3, _ = hllplus.New(12, 17)
+
+			for i := 0; i < 50_000; i++ {
+				n := rnd.Uint64()
+				s1.Add(n)
+				s2.Add(n)
+				s3.Add(n)
+			}
+			for i := 0; i < 50_000; i++ {
+				s1.Add(rnd.Uint64())
+				s2.Add(rnd.Uint64())
+				s3.Add(rnd.Uint64())
+			}
+
+			Expect(s1.Estimate()).To(Equal(uint64(100324)))
+			Expect(s2.Estimate()).To(Equal(uint64(100168)))
+			Expect(s3.Estimate()).To(Equal(uint64(100464)))
+		})
+
+		It("should support equal precision", func() {
+			s1.Merge(s2)
+			Expect(s1.Estimate()).To(Equal(uint64(150794)))
+		})
+
+		It("should support targets with lower precision", func() {
+			s1.Merge(s3)
+			Expect(s1.Estimate()).To(Equal(uint64(154744)))
+			Expect(s1.Precision()).To(Equal(uint8(12)))
+			Expect(s1.SparsePrecision()).To(Equal(uint8(17)))
+		})
+
+		It("should support targets with higher precision", func() {
+			s3.Merge(s1)
+			Expect(s3.Estimate()).To(Equal(uint64(154744)))
+			Expect(s3.Precision()).To(Equal(uint8(12)))
+			Expect(s3.SparsePrecision()).To(Equal(uint8(17)))
+		})
+	})
 })
 
 // --------------------------------------------------------------------
