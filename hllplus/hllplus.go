@@ -8,20 +8,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Proto-related global vars (Go cannot take pointers of consts).
-var (
-	hllEncodingVersion int32 = 2
-	hllAggregatorType        = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
-)
-
 // HLL is a HyperLogLog++ sketch implementation.
 type HLL struct {
 	normal []byte
 
 	precision       uint8
 	sparsePrecision uint8
-
-	additions int64
 }
 
 // New inits a new sketch.
@@ -57,8 +49,6 @@ func (s *HLL) Add(hash uint64) {
 	if rho > s.normal[pos] {
 		s.normal[pos] = rho
 	}
-
-	s.additions++
 }
 
 // Merge merges other into s.
