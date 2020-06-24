@@ -194,32 +194,21 @@ func validate(precision, sparsePrecision uint8) error {
 
 // Proto builds a BigQuery-compatible protobuf message, representing HLL aggregator state.
 func (s *HLL) Proto() proto.Message {
-	aggState := &pb.AggregatorStateProto{
-		Type:            &hllAggregatorType, // fixed/constant
-		NumValues:       &s.additions,
-		EncodingVersion: &hllEncodingVersion, // fixed/constant
-		ValueType:       nil,                 // looks to be a type of values being added - strings, bytes, ints etc - I think, can be omitted (may need to check though)
-	}
-
-	var hllState *pb.HyperLogLogPlusUniqueStateProto
 	if false { // TODO: handle sparse
 		// sparse:
 		size := int32(0) // TODO: handle sparse size
 		precision := int32(s.sparsePrecision)
-		hllState = &pb.HyperLogLogPlusUniqueStateProto{
+		return &pb.HyperLogLogPlusUniqueStateProto{
 			SparseSize:                  &size,
 			SparsePrecisionOrNumBuckets: &precision,
 			SparseData:                  nil, // TODO: use sparse data
 		}
-	} else {
-		// dense:
-		precision := int32(s.precision)
-		hllState = &pb.HyperLogLogPlusUniqueStateProto{
-			PrecisionOrNumBuckets: &precision,
-			Data:                  s.normal,
-		}
 	}
-	proto.SetExtension(aggState, pb.E_HyperloglogplusUniqueState, hllState)
 
-	return aggState
+	// dense:
+	precision := int32(s.precision)
+	return &pb.HyperLogLogPlusUniqueStateProto{
+		PrecisionOrNumBuckets: &precision,
+		Data:                  s.normal,
+	}
 }
