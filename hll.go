@@ -45,7 +45,7 @@ func (h *HLL) NumValues() uint64 {
 func (h *HLL) Merge(other Aggregator) error {
 	h2, ok := other.(*HLL)
 	if !ok {
-		return fmt.Errorf("aggregator %T merged into %T", other, h)
+		return fmt.Errorf("cannot merge %T into %T", other, h)
 	}
 
 	h.h.Merge(h2.h)
@@ -61,6 +61,7 @@ func (h *HLL) Result() uint64 {
 // MarshalBinary implements encoding.BinaryMarshaler interface.
 // TODO: implement.
 func (h *HLL) MarshalBinary() ([]byte, error) {
+	// return proto.Marshal(h.Proto())
 	return nil, nil
 }
 
