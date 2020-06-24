@@ -2,11 +2,6 @@ package hllplus
 
 import "math/bits"
 
-const (
-	minNormalPrecision = 10
-	maxNormalPrecision = 24
-)
-
 // Returns the HyperLogLog++ index for the given hash.
 func calcIndex(hash uint64, precision uint8) int {
 	idx := hash >> (64 - precision)
