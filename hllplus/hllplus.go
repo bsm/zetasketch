@@ -3,6 +3,9 @@ package hllplus
 import (
 	"fmt"
 	"math"
+
+	pb "github.com/bsm/zetasketch/internal/zetasketch"
+	"google.golang.org/protobuf/proto"
 )
 
 // HLL is a HyperLogLog++ sketch implementation.
@@ -177,4 +180,25 @@ func validate(precision, sparsePrecision uint8) error {
 		return fmt.Errorf("invalid sparse precision %d", sparsePrecision)
 	}
 	return nil
+}
+
+// Proto builds a BigQuery-compatible protobuf message, representing HLL aggregator state.
+func (s *HLL) Proto() proto.Message {
+	if false { // TODO: handle sparse
+		// sparse:
+		size := int32(0) // TODO: handle sparse size
+		precision := int32(s.sparsePrecision)
+		return &pb.HyperLogLogPlusUniqueStateProto{
+			SparseSize:                  &size,
+			SparsePrecisionOrNumBuckets: &precision,
+			SparseData:                  nil, // TODO: use sparse data
+		}
+	}
+
+	// dense:
+	precision := int32(s.precision)
+	return &pb.HyperLogLogPlusUniqueStateProto{
+		PrecisionOrNumBuckets: &precision,
+		Data:                  s.normal,
+	}
 }

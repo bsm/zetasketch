@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/bsm/zetasketch/hllplus"
+	pb "github.com/bsm/zetasketch/internal/zetasketch"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -158,6 +160,24 @@ var _ = Describe("HLL", func() {
 			Expect(s3.Precision()).To(Equal(uint8(12)))
 			Expect(s3.SparsePrecision()).To(Equal(uint8(17)))
 		})
+	})
+
+	It("should return proto", func() {
+		subject, _ = hllplus.New(19, 20)
+		subject.Add(1)
+		subject.Add(2)
+		subject.Add(1)
+
+		msg := subject.Proto().(*pb.HyperLogLogPlusUniqueStateProto)
+
+		// expect dense representation:
+		Expect(*msg.PrecisionOrNumBuckets).To(BeNumerically("==", 19))
+		Expect(msg.Data).NotTo(BeEmpty()) // TODO: maybe better check exact value?
+
+		// expect NO sparse representation:
+		Expect(msg.SparseSize).To(BeNil())
+		Expect(msg.SparsePrecisionOrNumBuckets).To(BeNil())
+		Expect(msg.SparseData).To(BeNil())
 	})
 })
 
