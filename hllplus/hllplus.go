@@ -8,6 +8,13 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Precision bounds.
+const (
+	MinPrecision       = 10
+	MaxPrecision       = 24
+	MaxSparsePrecision = 25
+)
+
 // HLL is a HyperLogLog++ sketch implementation.
 type HLL struct {
 	normal []byte
@@ -173,10 +180,10 @@ func (s *HLL) eachRhoWDowngrade(targetPrecision uint8, iter func(int, uint8)) {
 }
 
 func validate(precision, sparsePrecision uint8) error {
-	if precision < minNormalPrecision || precision > maxNormalPrecision {
+	if precision < MinPrecision || precision > MaxPrecision {
 		return fmt.Errorf("invalid normal precision %d", precision)
 	}
-	if sparsePrecision > maxSparsePrecision {
+	if sparsePrecision > MaxSparsePrecision {
 		return fmt.Errorf("invalid sparse precision %d", sparsePrecision)
 	}
 	return nil
