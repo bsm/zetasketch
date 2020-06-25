@@ -22,7 +22,7 @@ func Bytes(data []byte) uint64 {
 	} else if n < 64 {
 		h = hash33to64(data)
 	} else {
-		panic("hashing of data more than 64 bytes long is not implemented yet")
+		h = fullFingerprint(data)
 	}
 
 	var u, v uint64 = c0, c0
@@ -116,6 +116,33 @@ func hash33to64(data []byte) uint64 {
 	return shiftMix(r*c0+vs) * c2
 }
 
+// Compute an 8-byte hash of a byte array of length greater than 64 bytes.
+func fullFingerprint(data []byte) uint64 {
+	// For lengths over 64 bytes we hash the end first, and then as we
+	// loop we keep 56 bytes of state: v, w, x, y, and z.
+	x := load64(data)
+	y := load64(data[len(data)-16:]) ^ c1
+	z := load64(data[len(data)-56:]) ^ c0
+	v1, v2 := weakHashLength32WithSeeds(data[len(data)-64:], uint64(len(data)), y)
+	w1, w2 := weakHashLength32WithSeeds(data[len(data)-32:], uint64(len(data))*c1, c0)
+	z += shiftMix(v2) * c1
+	x = rotateRight(z+x, 39) * c1
+	y = rotateRight(y, 33) * c1
+
+	for len(data) > 64 {
+		x = rotateRight(x+y+v1+load64(data[16:]), 37) * c1
+		y = rotateRight(y+v2+load64(data[48:]), 42) * c1
+		x ^= w2
+		y ^= v1
+		z = rotateRight(z^w1, 33)
+		v1, v2 = weakHashLength32WithSeeds(data, v2*c1, x+w1)
+		w1, w2 = weakHashLength32WithSeeds(data[32:], z+w2, y)
+		z, x = x, z
+		data = data[64:]
+	}
+	return hash128to64(hash128to64(v1, w1)+shiftMix(y)*c1+z, hash128to64(v2, w2)+x)
+}
+
 func load64(data []byte) uint64 {
 	return binary.LittleEndian.Uint64(data)
 }
@@ -126,4 +153,20 @@ func rotateRight(v uint64, k uint) uint64 {
 
 func shiftMix(v uint64) uint64 {
 	return v ^ (v >> 47)
+}
+
+/// Computes intermediate hash of 32 bytes of byte array from the given offset.
+func weakHashLength32WithSeeds(data []byte, seedA, seedB uint64) (uint64, uint64) {
+	p1 := load64(data)
+	p2 := load64(data[8:])
+	p3 := load64(data[16:])
+	p4 := load64(data[24:])
+
+	seedA += p1
+	seedB = rotateRight(seedB+seedA+p4, 51)
+	c := seedA
+	seedA += p2
+	seedA += p3
+	seedB += rotateRight(seedA, 23)
+	return seedA + p4, seedB + c
 }
