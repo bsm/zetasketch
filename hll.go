@@ -47,7 +47,7 @@ func NewHLLFromProto(msg *pb.AggregatorStateProto) (*HLL, error) {
 	ext := proto.GetExtension(msg, zetasketch.E_HyperloglogplusUniqueState)
 	hState, ok := ext.(*pb.HyperLogLogPlusUniqueStateProto)
 	if !ok {
-		return nil, fmt.Errorf("incompatile binary message: invalid HyperLogLog++ state")
+		return nil, fmt.Errorf("incompatible binary message: invalid HyperLogLog++ state")
 	}
 
 	hll, err := hllplus.NewFromProto(hState)
