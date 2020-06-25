@@ -41,16 +41,13 @@ func NewFromProto(msg *pb.HyperLogLogPlusUniqueStateProto) (*HLL, error) {
 		return nil, fmt.Errorf("sparse representation is not supported yet")
 	}
 
-	if msg.PrecisionOrNumBuckets == nil {
-		return nil, fmt.Errorf("proto contains no precision")
-	}
-	if err := validate(uint8(*msg.PrecisionOrNumBuckets), 0); err != nil {
+	if err := validate(uint8(msg.GetPrecisionOrNumBuckets()), 0); err != nil {
 		return nil, err
 	}
 
 	return &HLL{
 		normal:    msg.Data,
-		precision: uint8(*msg.PrecisionOrNumBuckets),
+		precision: uint8(msg.GetPrecisionOrNumBuckets()),
 	}, nil
 }
 

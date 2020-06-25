@@ -60,8 +60,8 @@ var _ = Describe("HLL", func() {
 		Expect(ext).NotTo(BeNil())
 
 		// check that it can init back from proto message:
-		subject, err := zetasketch.NewHLLFromProto(msg)
-		Expect(err).NotTo(HaveOccurred())
+		subject := new(zetasketch.HLL)
+		Expect(subject.FromProto(msg)).To(Succeed())
 		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
 		Expect(subject.Result()).To(BeNumerically("==", 1_003))
 
