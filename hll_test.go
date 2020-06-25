@@ -29,7 +29,7 @@ var _ = Describe("HLL", func() {
 	})
 
 	It("should estimate uniques", func() {
-		Expect(subject.Result()).To(Equal(uint64(1_003)))
+		Expect(subject.Result()).To(Equal(int64(1_003)))
 	})
 
 	It("should merge", func() {
@@ -40,11 +40,11 @@ var _ = Describe("HLL", func() {
 
 		Expect(subject.Merge(other)).To(Succeed())
 		Expect(subject.NumValues()).To(Equal(uint64(1_900)))
-		Expect(subject.Result()).To(Equal(uint64(1_207)))
+		Expect(subject.Result()).To(Equal(int64(1_207)))
 
 		// `other` is not modified:
 		Expect(other.NumValues()).To(Equal(uint64(400)))
-		Expect(other.Result()).To(Equal(uint64(400)))
+		Expect(other.Result()).To(Equal(int64(400)))
 	})
 
 	It("should export protobuf", func() {

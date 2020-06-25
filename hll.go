@@ -56,7 +56,7 @@ func (h *HLL) Merge(other Aggregator) error {
 }
 
 // Result returns an estimate of the unique of values.
-func (h *HLL) Result() uint64 {
+func (h *HLL) Result() int64 {
 	return h.h.Estimate()
 }
 
