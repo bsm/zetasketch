@@ -5,7 +5,6 @@ import (
 	"math"
 
 	pb "github.com/bsm/zetasketch/internal/zetasketch"
-	"google.golang.org/protobuf/proto"
 )
 
 // Precision bounds.
@@ -210,7 +209,7 @@ func validate(precision, sparsePrecision uint8) error {
 }
 
 // Proto builds a BigQuery-compatible protobuf message, representing HLL aggregator state.
-func (s *HLL) Proto() proto.Message {
+func (s *HLL) Proto() *pb.HyperLogLogPlusUniqueStateProto {
 	if false { // TODO: handle sparse
 		// sparse:
 		size := int32(0) // TODO: handle sparse size

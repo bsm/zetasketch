@@ -47,8 +47,9 @@ var _ = Describe("HLL", func() {
 		Expect(other.Result()).To(Equal(int64(400)))
 	})
 
-	It("should export protobuf", func() {
-		msg := subject.Proto().(*pb.AggregatorStateProto)
+	It("should return / init from protobuf", func() {
+		msg := subject.Proto()
+
 		Expect(*msg.EncodingVersion).To(BeNumerically("==", 2))                // fixed/const
 		Expect(*msg.Type).To(Equal(pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE)) // fixed/const
 		Expect(*msg.NumValues).To(BeNumerically("==", 1_500))
@@ -58,9 +59,21 @@ var _ = Describe("HLL", func() {
 		ext := proto.GetExtension(msg, pb.E_HyperloglogplusUniqueState)
 		Expect(ext).NotTo(BeNil())
 
+		// check that it can init back from proto message:
+		subject, err := zetasketch.NewHLLFromProto(msg)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
+		Expect(subject.Result()).To(BeNumerically("==", 1_003))
+
 		// basic check for wrapper method to marshal this proto:
 		data, err := subject.MarshalBinary()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(data)).To(Equal(32786)) // on failure, this provides nicer message than HaveLen
+
+		// and unmarshal:
+		subject2 := new(zetasketch.HLL)
+		Expect(subject2.UnmarshalBinary(data)).To(Succeed())
+		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
+		Expect(subject.Result()).To(BeNumerically("==", 1_003))
 	})
 })

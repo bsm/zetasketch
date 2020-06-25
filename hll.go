@@ -32,6 +32,35 @@ func NewHLL(cfg *HLLConfig) *HLL {
 	return &HLL{h: h}
 }
 
+// NewHLLFromProto inits a new HLL++ aggregator from given proto message.
+func NewHLLFromProto(msg *pb.AggregatorStateProto) (*HLL, error) {
+	if msg.Type == nil || *msg.Type != pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE {
+		return nil, fmt.Errorf("incompatible binary message: unexpected type %s", msg.Type.String())
+	}
+	if msg.EncodingVersion == nil || *msg.EncodingVersion != 2 {
+		return nil, fmt.Errorf("incompatible binary message: unsupported encoding version %#v", msg.EncodingVersion)
+	}
+	if msg.NumValues == nil {
+		return nil, fmt.Errorf("incompatible binary message: no num values")
+	}
+
+	ext := proto.GetExtension(msg, zetasketch.E_HyperloglogplusUniqueState)
+	hState, ok := ext.(*pb.HyperLogLogPlusUniqueStateProto)
+	if !ok {
+		return nil, fmt.Errorf("incompatile binary message: invalid HyperLogLog++ state")
+	}
+
+	hll, err := hllplus.NewFromProto(hState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &HLL{
+		h: hll,
+		n: uint64(*msg.NumValues),
+	}, nil
+}
+
 // Add adds value v to the aggregator.
 func (h *HLL) Add(v Value) {
 	h.n++
@@ -60,13 +89,8 @@ func (h *HLL) Result() int64 {
 	return h.h.Estimate()
 }
 
-// MarshalBinary implements encoding.BinaryMarshaler interface.
-func (h *HLL) MarshalBinary() ([]byte, error) {
-	return proto.Marshal(h.Proto())
-}
-
 // Proto returns a marshalable protobuf message.
-func (h *HLL) Proto() proto.Message {
+func (h *HLL) Proto() *pb.AggregatorStateProto {
 	var (
 		encodingVersion int32 = 2
 		aggType               = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
@@ -79,6 +103,26 @@ func (h *HLL) Proto() proto.Message {
 	}
 	proto.SetExtension(msg, zetasketch.E_HyperloglogplusUniqueState, h.h.Proto())
 	return msg
+}
+
+// MarshalBinary serializes aggregator to bytes.
+func (h *HLL) MarshalBinary() ([]byte, error) {
+	return proto.Marshal(h.Proto())
+}
+
+// UnmarshalBinary deserializes aggregator from bytes.
+func (h *HLL) UnmarshalBinary(data []byte) error {
+	msg := new(pb.AggregatorStateProto)
+	if err := proto.Unmarshal(data, msg); err != nil {
+		return err
+	}
+
+	h2, err := NewHLLFromProto(msg)
+	if err != nil {
+		return err
+	}
+	*h = *h2
+	return nil
 }
 
 // -----------------------------------------------------------------------

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bsm/zetasketch/hllplus"
-	pb "github.com/bsm/zetasketch/internal/zetasketch"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -168,7 +167,7 @@ var _ = Describe("HLL", func() {
 			subject.Add(rnd.Uint64())
 		}
 
-		msg := subject.Proto().(*pb.HyperLogLogPlusUniqueStateProto)
+		msg := subject.Proto()
 
 		// expect dense representation:
 		Expect(*msg.PrecisionOrNumBuckets).To(BeNumerically("==", 10))
