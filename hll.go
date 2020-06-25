@@ -3,8 +3,10 @@ package zetasketch
 import (
 	"fmt"
 
-	// pb "github.com/bsm/zetasketch/internal/zetasketch"
 	"github.com/bsm/zetasketch/hllplus"
+	"github.com/bsm/zetasketch/internal/zetasketch"
+	pb "github.com/bsm/zetasketch/internal/zetasketch"
+	"google.golang.org/protobuf/proto"
 )
 
 // HLL implements a HLL++ aggregator for estimating cardinalities of multisets.
@@ -59,27 +61,25 @@ func (h *HLL) Result() uint64 {
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler interface.
-// TODO: implement.
 func (h *HLL) MarshalBinary() ([]byte, error) {
-	// return proto.Marshal(h.Proto())
-	return nil, nil
+	return proto.Marshal(h.Proto())
 }
 
 // Proto returns a marshalable protobuf message.
-// TODO: implement.
-// func (h *HLL) Proto() *pb.AggregatorStateProto {
-// 	const (
-// 		encodingVersion int32 = 2
-// 	  type = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
-// 	 numValues = h.n
-// 	)
-
-// 	return &pb.AggregatorStateProto{
-// 		Type:            &type,
-// 		EncodingVersion: &encodingVersion,
-// 		NumValues:       &numValues,
-// 	}
-// }
+func (h *HLL) Proto() proto.Message {
+	var (
+		encodingVersion int32 = 2
+		aggType               = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
+		numValues             = int64(h.n)
+	)
+	msg := &pb.AggregatorStateProto{
+		Type:            &aggType,
+		EncodingVersion: &encodingVersion,
+		NumValues:       &numValues,
+	}
+	proto.SetExtension(msg, zetasketch.E_HyperloglogplusUniqueState, h.h.Proto())
+	return msg
+}
 
 // -----------------------------------------------------------------------
 
