@@ -13,8 +13,6 @@ const (
 )
 
 // Bytes computes a hash of data.
-//
-// WARNING: it supports data with up to 64 bytes for now. Will panic if data is larger.
 func Bytes(data []byte) uint64 {
 	var h uint64
 	if n := len(data); n <= 32 {
