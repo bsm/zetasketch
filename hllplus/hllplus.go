@@ -35,6 +35,26 @@ func New(precision, sparsePrecision uint8) (*HLL, error) {
 	return &HLL{precision: precision, sparsePrecision: sparsePrecision}, nil
 }
 
+// NewFromProto inits/restores a sketch from proto message.
+func NewFromProto(msg *pb.HyperLogLogPlusUniqueStateProto) (*HLL, error) {
+	if len(msg.SparseData) > 0 {
+		// TODO: handle proto for sparse data.
+		return nil, fmt.Errorf("sparse representation is not supported yet")
+	}
+
+	if msg.PrecisionOrNumBuckets == nil {
+		return nil, fmt.Errorf("proto contains no precision")
+	}
+	if err := validate(uint8(*msg.PrecisionOrNumBuckets), 0); err != nil {
+		return nil, err
+	}
+
+	return &HLL{
+		normal:    msg.Data,
+		precision: uint8(*msg.PrecisionOrNumBuckets),
+	}, nil
+}
+
 // Precision returns the normal precision.
 func (s *HLL) Precision() uint8 {
 	return s.precision
