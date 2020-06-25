@@ -26,7 +26,7 @@ var _ = Describe("HLL", func() {
 			for i := 0; i < 800; i++ {
 				subject.Add(rnd.Uint64())
 			}
-			Expect(subject.Estimate()).To(Equal(uint64(exp)))
+			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
 		Entry("p=10", 10, 800),
 		Entry("p=11", 11, 794),
@@ -45,7 +45,7 @@ var _ = Describe("HLL", func() {
 			for i := 0; i < 200_000; i++ {
 				subject.Add(rnd.Uint64())
 			}
-			Expect(subject.Estimate()).To(Equal(uint64(exp)))
+			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
 		Entry("p=10", 10, 199197),
 		Entry("p=11", 11, 204855),
@@ -75,7 +75,7 @@ var _ = Describe("HLL", func() {
 				subject.Add(h)
 				subject.Add(h)
 			}
-			Expect(subject.Estimate()).To(Equal(uint64(exp)))
+			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
 		Entry("p=10", 10, 148131),
 		Entry("p=11", 11, 152153),
@@ -104,8 +104,8 @@ var _ = Describe("HLL", func() {
 			s2.Add(n)
 		}
 
-		Expect(s1.Estimate()).To(Equal(uint64(99879)))
-		Expect(s2.Estimate()).To(Equal(uint64(100680)))
+		Expect(s1.Estimate()).To(Equal(int64(99879)))
+		Expect(s2.Estimate()).To(Equal(int64(100680)))
 
 		Expect(s1.Precision()).To(Equal(uint8(15)))
 		Expect(s1.SparsePrecision()).To(Equal(uint8(20)))
@@ -113,8 +113,8 @@ var _ = Describe("HLL", func() {
 		Expect(s1.Precision()).To(Equal(uint8(12)))
 		Expect(s1.SparsePrecision()).To(Equal(uint8(17)))
 
-		Expect(s1.Estimate()).To(Equal(uint64(100680)))
-		Expect(s2.Estimate()).To(Equal(uint64(100680)))
+		Expect(s1.Estimate()).To(Equal(int64(100680)))
+		Expect(s2.Estimate()).To(Equal(int64(100680)))
 	})
 
 	Describe("merge", func() {
@@ -137,26 +137,26 @@ var _ = Describe("HLL", func() {
 				s3.Add(rnd.Uint64())
 			}
 
-			Expect(s1.Estimate()).To(Equal(uint64(100324)))
-			Expect(s2.Estimate()).To(Equal(uint64(100168)))
-			Expect(s3.Estimate()).To(Equal(uint64(100464)))
+			Expect(s1.Estimate()).To(Equal(int64(100324)))
+			Expect(s2.Estimate()).To(Equal(int64(100168)))
+			Expect(s3.Estimate()).To(Equal(int64(100464)))
 		})
 
 		It("should support equal precision", func() {
 			s1.Merge(s2)
-			Expect(s1.Estimate()).To(Equal(uint64(150794)))
+			Expect(s1.Estimate()).To(Equal(int64(150794)))
 		})
 
 		It("should support targets with lower precision", func() {
 			s1.Merge(s3)
-			Expect(s1.Estimate()).To(Equal(uint64(154744)))
+			Expect(s1.Estimate()).To(Equal(int64(154744)))
 			Expect(s1.Precision()).To(Equal(uint8(12)))
 			Expect(s1.SparsePrecision()).To(Equal(uint8(17)))
 		})
 
 		It("should support targets with higher precision", func() {
 			s3.Merge(s1)
-			Expect(s3.Estimate()).To(Equal(uint64(154744)))
+			Expect(s3.Estimate()).To(Equal(int64(154744)))
 			Expect(s3.Precision()).To(Equal(uint8(12)))
 			Expect(s3.SparsePrecision()).To(Equal(uint8(17)))
 		})

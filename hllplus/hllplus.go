@@ -103,7 +103,7 @@ func (s *HLL) Clone() *HLL {
 
 // Estimate computes the cardinality estimate according to the algorithm in Figure 6 of the HLL++ paper
 // (https://goo.gl/pc916Z).
-func (s *HLL) Estimate() uint64 {
+func (s *HLL) Estimate() int64 {
 	if len(s.normal) == 0 {
 		return 0
 	}
@@ -130,7 +130,7 @@ func (s *HLL) Estimate() uint64 {
 	x := 1 << s.precision
 	m := float64(x)
 	if numZeros != 0 {
-		n := uint64(m*math.Log(m/float64(numZeros)) + 0.5)
+		n := int64(m*math.Log(m/float64(numZeros)) + 0.5)
 		if n <= linearCountingThreshold(s.precision) {
 			return n
 		}
@@ -142,7 +142,7 @@ func (s *HLL) Estimate() uint64 {
 	// Perform bias correction on small estimates. HyperLogLogPlusPlusData only contains bias
 	// estimates for small cardinalities and returns 0 for anything else, so the "E < 5m" guard from
 	// the HLL++ paper (https://goo.gl/pc916Z) is superfluous here.
-	return uint64(raw - estimateBias(raw, s.precision) + 0.5)
+	return int64(raw - estimateBias(raw, s.precision) + 0.5)
 }
 
 // Downgrade tries to reduce the precision of the sketch.
