@@ -76,7 +76,6 @@ func (h *HLL) Proto() proto.Message {
 		Type:            &aggType,
 		EncodingVersion: &encodingVersion,
 		NumValues:       &numValues,
-		ValueType:       nil, // looks to be a type of values being added - strings, bytes, ints etc - seems that BQ is OK with it being omitted
 	}
 	proto.SetExtension(msg, zetasketch.E_HyperloglogplusUniqueState, h.h.Proto())
 	return msg
