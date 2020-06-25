@@ -26,5 +26,8 @@ var _ = Describe("Bytes", func() {
 
 	It("should hash longer sequences", func() {
 		Expect(hash.Bytes(bytes.Repeat(foobar, 8))).To(Equal(uint64(0x94386e8403038649)))
+		Expect(hash.Bytes(bytes.Repeat(foobar, 24))).To(Equal(uint64(0xd019f3291f1d4d37)))
+		Expect(hash.Bytes(bytes.Repeat(foobar, 45))).To(Equal(uint64(0x549b2e228e80ee1a)))
+		Expect(hash.Bytes(bytes.Repeat(foobar, 48))).To(Equal(uint64(0x874fce45a1e2a8ae)))
 	})
 })
