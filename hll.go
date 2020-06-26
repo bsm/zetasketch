@@ -20,7 +20,7 @@ import (
 // Note that this aggregator is not designed to be thread safe.
 type HLL struct {
 	h *hllplus.HLL
-	n uint64
+	n int64
 }
 
 // NewHLL inits a new HLL++ aggregator.
@@ -39,7 +39,7 @@ func (h *HLL) Add(v Value) {
 }
 
 // NumValues returns the number of values seen.
-func (h *HLL) NumValues() uint64 {
+func (h *HLL) NumValues() int64 {
 	return h.n
 }
 
@@ -112,7 +112,7 @@ func (h *HLL) fromProto(msg *pb.AggregatorStateProto) error {
 	}
 
 	h.h = hll
-	h.n = uint64(msg.GetNumValues())
+	h.n = msg.GetNumValues()
 	return nil
 }
 
