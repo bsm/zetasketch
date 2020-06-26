@@ -5,7 +5,6 @@ import (
 	"math"
 
 	pb "github.com/bsm/zetasketch/internal/zetasketch"
-	"google.golang.org/protobuf/proto"
 )
 
 // Precision bounds.
@@ -33,6 +32,23 @@ func New(precision, sparsePrecision uint8) (*HLL, error) {
 	}
 
 	return &HLL{precision: precision, sparsePrecision: sparsePrecision}, nil
+}
+
+// NewFromProto inits/restores a sketch from proto message.
+func NewFromProto(msg *pb.HyperLogLogPlusUniqueStateProto) (*HLL, error) {
+	if len(msg.SparseData) > 0 {
+		// TODO: handle proto for sparse data.
+		return nil, fmt.Errorf("sparse representation is not supported yet")
+	}
+
+	if err := validate(uint8(msg.GetPrecisionOrNumBuckets()), 0); err != nil {
+		return nil, err
+	}
+
+	return &HLL{
+		normal:    msg.Data,
+		precision: uint8(msg.GetPrecisionOrNumBuckets()),
+	}, nil
 }
 
 // Precision returns the normal precision.
@@ -190,7 +206,7 @@ func validate(precision, sparsePrecision uint8) error {
 }
 
 // Proto builds a BigQuery-compatible protobuf message, representing HLL aggregator state.
-func (s *HLL) Proto() proto.Message {
+func (s *HLL) Proto() *pb.HyperLogLogPlusUniqueStateProto {
 	if false { // TODO: handle sparse
 		// sparse:
 		size := int32(0) // TODO: handle sparse size

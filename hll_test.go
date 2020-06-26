@@ -2,8 +2,6 @@ package zetasketch_test
 
 import (
 	"github.com/bsm/zetasketch"
-	pb "github.com/bsm/zetasketch/internal/zetasketch"
-	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,11 +23,11 @@ var _ = Describe("HLL", func() {
 	})
 
 	It("should count values", func() {
-		Expect(subject.NumValues()).To(Equal(uint64(1_500)))
+		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
 	})
 
 	It("should estimate uniques", func() {
-		Expect(subject.Result()).To(Equal(int64(1_003)))
+		Expect(subject.Result()).To(BeNumerically("==", 1_003))
 	})
 
 	It("should merge", func() {
@@ -39,28 +37,21 @@ var _ = Describe("HLL", func() {
 		}
 
 		Expect(subject.Merge(other)).To(Succeed())
-		Expect(subject.NumValues()).To(Equal(uint64(1_900)))
-		Expect(subject.Result()).To(Equal(int64(1_207)))
+		Expect(subject.NumValues()).To(BeNumerically("==", 1_900))
+		Expect(subject.Result()).To(BeNumerically("==", 1_207))
 
 		// `other` is not modified:
-		Expect(other.NumValues()).To(Equal(uint64(400)))
-		Expect(other.Result()).To(Equal(int64(400)))
+		Expect(other.NumValues()).To(BeNumerically("==", 400))
+		Expect(other.Result()).To(BeNumerically("==", 400))
 	})
 
-	It("should export protobuf", func() {
-		msg := subject.Proto().(*pb.AggregatorStateProto)
-		Expect(*msg.EncodingVersion).To(BeNumerically("==", 2))                // fixed/const
-		Expect(*msg.Type).To(Equal(pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE)) // fixed/const
-		Expect(*msg.NumValues).To(BeNumerically("==", 1_500))
-		Expect(msg.ValueType).To(BeNil()) // we don't populate it
-
-		// check that we do not forget to populate HLL-specific extension:
-		ext := proto.GetExtension(msg, pb.E_HyperloglogplusUniqueState)
-		Expect(ext).NotTo(BeNil())
-
-		// basic check for wrapper method to marshal this proto:
+	It("should marshal/unmarshal binary", func() {
 		data, err := subject.MarshalBinary()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(data)).To(Equal(32786)) // on failure, this provides nicer message than HaveLen
+
+		subject = new(zetasketch.HLL)
+		Expect(subject.UnmarshalBinary(data)).To(Succeed())
+		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
+		Expect(subject.Result()).To(BeNumerically("==", 1_003))
 	})
 })

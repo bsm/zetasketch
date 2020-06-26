@@ -20,7 +20,7 @@ import (
 // Note that this aggregator is not designed to be thread safe.
 type HLL struct {
 	h *hllplus.HLL
-	n uint64
+	n int64
 }
 
 // NewHLL inits a new HLL++ aggregator.
@@ -39,7 +39,7 @@ func (h *HLL) Add(v Value) {
 }
 
 // NumValues returns the number of values seen.
-func (h *HLL) NumValues() uint64 {
+func (h *HLL) NumValues() int64 {
 	return h.n
 }
 
@@ -60,13 +60,21 @@ func (h *HLL) Result() int64 {
 	return h.h.Estimate()
 }
 
-// MarshalBinary implements encoding.BinaryMarshaler interface.
+// MarshalBinary serializes aggregator to bytes.
 func (h *HLL) MarshalBinary() ([]byte, error) {
-	return proto.Marshal(h.Proto())
+	return proto.Marshal(h.proto())
 }
 
-// Proto returns a marshalable protobuf message.
-func (h *HLL) Proto() proto.Message {
+// UnmarshalBinary deserializes aggregator from bytes.
+func (h *HLL) UnmarshalBinary(data []byte) error {
+	msg := new(pb.AggregatorStateProto)
+	if err := proto.Unmarshal(data, msg); err != nil {
+		return err
+	}
+	return h.fromProto(msg)
+}
+
+func (h *HLL) proto() *pb.AggregatorStateProto {
 	var (
 		encodingVersion int32 = 2
 		aggType               = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
@@ -79,6 +87,33 @@ func (h *HLL) Proto() proto.Message {
 	}
 	proto.SetExtension(msg, zetasketch.E_HyperloglogplusUniqueState, h.h.Proto())
 	return msg
+}
+
+func (h *HLL) fromProto(msg *pb.AggregatorStateProto) error {
+	if msg.GetType() != pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE {
+		return fmt.Errorf("incompatible binary message: unexpected type %s", msg.GetType().String())
+	}
+	if msg.GetEncodingVersion() != 2 {
+		return fmt.Errorf("incompatible binary message: unsupported encoding version %#v", msg.GetEncodingVersion())
+	}
+	if msg.NumValues == nil {
+		return fmt.Errorf("incompatible binary message: no num values")
+	}
+
+	ext := proto.GetExtension(msg, zetasketch.E_HyperloglogplusUniqueState)
+	hState, ok := ext.(*pb.HyperLogLogPlusUniqueStateProto)
+	if !ok {
+		return fmt.Errorf("incompatible binary message: invalid HyperLogLog++ state")
+	}
+
+	hll, err := hllplus.NewFromProto(hState)
+	if err != nil {
+		return err
+	}
+
+	h.h = hll
+	h.n = msg.GetNumValues()
+	return nil
 }
 
 // -----------------------------------------------------------------------

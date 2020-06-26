@@ -14,11 +14,12 @@ type Aggregator interface {
 	// Add adds a value.
 	Add(v Value)
 	// NumValues returns the total number of input values that this aggregator has seen.
-	NumValues() uint64
+	NumValues() int64
 	// Merge merges two aggregators.
 	Merge(other Aggregator) error
 
 	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
 }
 
 // Value is a hashable value.
