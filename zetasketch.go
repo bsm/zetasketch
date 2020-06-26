@@ -19,6 +19,7 @@ type Aggregator interface {
 	Merge(other Aggregator) error
 
 	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
 }
 
 // Value is a hashable value.
