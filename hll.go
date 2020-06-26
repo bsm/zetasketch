@@ -60,8 +60,21 @@ func (h *HLL) Result() int64 {
 	return h.h.Estimate()
 }
 
-// Proto returns a marshalable protobuf message.
-func (h *HLL) Proto() *pb.AggregatorStateProto {
+// MarshalBinary serializes aggregator to bytes.
+func (h *HLL) MarshalBinary() ([]byte, error) {
+	return proto.Marshal(h.proto())
+}
+
+// UnmarshalBinary deserializes aggregator from bytes.
+func (h *HLL) UnmarshalBinary(data []byte) error {
+	msg := new(pb.AggregatorStateProto)
+	if err := proto.Unmarshal(data, msg); err != nil {
+		return err
+	}
+	return h.fromProto(msg)
+}
+
+func (h *HLL) proto() *pb.AggregatorStateProto {
 	var (
 		encodingVersion int32 = 2
 		aggType               = pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE
@@ -76,9 +89,7 @@ func (h *HLL) Proto() *pb.AggregatorStateProto {
 	return msg
 }
 
-// FromProto populates aggregator from given proto message.
-// It overrides existing state.
-func (h *HLL) FromProto(msg *pb.AggregatorStateProto) error {
+func (h *HLL) fromProto(msg *pb.AggregatorStateProto) error {
 	if msg.GetType() != pb.AggregatorType_HYPERLOGLOG_PLUS_UNIQUE {
 		return fmt.Errorf("incompatible binary message: unexpected type %s", msg.GetType().String())
 	}
@@ -103,20 +114,6 @@ func (h *HLL) FromProto(msg *pb.AggregatorStateProto) error {
 	h.h = hll
 	h.n = uint64(msg.GetNumValues())
 	return nil
-}
-
-// MarshalBinary serializes aggregator to bytes.
-func (h *HLL) MarshalBinary() ([]byte, error) {
-	return proto.Marshal(h.Proto())
-}
-
-// UnmarshalBinary deserializes aggregator from bytes.
-func (h *HLL) UnmarshalBinary(data []byte) error {
-	msg := new(pb.AggregatorStateProto)
-	if err := proto.Unmarshal(data, msg); err != nil {
-		return err
-	}
-	return h.FromProto(msg)
 }
 
 // -----------------------------------------------------------------------
