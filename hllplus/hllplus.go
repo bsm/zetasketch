@@ -66,9 +66,7 @@ func (s *HLL) SparsePrecision() uint8 {
 
 // Add adds the uniform hash value to the representation.
 func (s *HLL) Add(hash uint64) {
-	if len(s.normal) == 0 {
-		s.normal = make([]byte, 1<<s.precision)
-	}
+	s.ensureNormal()
 
 	pos := calcIndex(hash, s.precision)
 	rho := calcRhoW(hash, s.precision)
@@ -83,6 +81,9 @@ func (s *HLL) Merge(other *HLL) {
 	if len(other.normal) == 0 {
 		return
 	}
+
+	// Make sure receiver is allocated.
+	s.ensureNormal()
 
 	// If other precision is higher.
 	if s.precision < other.precision {
@@ -188,6 +189,12 @@ func (s *HLL) Downgrade(precision, sparsePrecision uint8) error {
 		s.sparsePrecision = sparsePrecision
 	}
 	return nil
+}
+
+func (s *HLL) ensureNormal() {
+	if len(s.normal) == 0 {
+		s.normal = make([]byte, 1<<s.precision)
+	}
 }
 
 func (s *HLL) eachRhoWDowngrade(targetPrecision uint8, iter func(int, uint8)) {

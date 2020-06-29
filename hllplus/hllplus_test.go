@@ -159,6 +159,16 @@ var _ = Describe("HLL", func() {
 			Expect(s3.Precision()).To(Equal(uint8(12)))
 			Expect(s3.SparsePrecision()).To(Equal(uint8(17)))
 		})
+
+		It("should succeed if target is empty", func() {
+			subject, _ = hllplus.New(15, 20)
+			Expect(func() { subject.Merge(s1) }).NotTo(Panic())
+
+			// just a straight copy of s1:
+			Expect(subject.Estimate()).To(Equal(s1.Estimate()))
+			Expect(subject.Precision()).To(Equal(s1.Precision()))
+			Expect(subject.SparsePrecision()).To(Equal(s1.SparsePrecision()))
+		})
 	})
 
 	It("should return / init from proto", func() {
