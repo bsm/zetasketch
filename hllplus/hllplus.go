@@ -41,13 +41,16 @@ func NewFromProto(msg *pb.HyperLogLogPlusUniqueStateProto) (*HLL, error) {
 		return nil, fmt.Errorf("sparse representation is not supported yet")
 	}
 
-	if err := validate(uint8(msg.GetPrecisionOrNumBuckets()), 0); err != nil {
+	precision := uint8(msg.GetPrecisionOrNumBuckets())
+	sparsePrecision := uint8(msg.GetSparsePrecisionOrNumBuckets())
+	if err := validate(precision, sparsePrecision); err != nil {
 		return nil, err
 	}
 
 	return &HLL{
-		normal:    msg.Data,
-		precision: uint8(msg.GetPrecisionOrNumBuckets()),
+		normal:          msg.Data,
+		precision:       precision,
+		sparsePrecision: sparsePrecision,
 	}, nil
 }
 
@@ -207,21 +210,23 @@ func validate(precision, sparsePrecision uint8) error {
 
 // Proto builds a BigQuery-compatible protobuf message, representing HLL aggregator state.
 func (s *HLL) Proto() *pb.HyperLogLogPlusUniqueStateProto {
+	// both precisions must always be marshalled:
+	precision := int32(s.precision)
+	sparsePrecision := int32(s.sparsePrecision)
+	msg := &pb.HyperLogLogPlusUniqueStateProto{
+		PrecisionOrNumBuckets:       &precision,
+		SparsePrecisionOrNumBuckets: &sparsePrecision,
+	}
+
 	if false { // TODO: handle sparse
 		// sparse:
-		size := int32(0) // TODO: handle sparse size
-		precision := int32(s.sparsePrecision)
-		return &pb.HyperLogLogPlusUniqueStateProto{
-			SparseSize:                  &size,
-			SparsePrecisionOrNumBuckets: &precision,
-			SparseData:                  nil, // TODO: use sparse data
-		}
+		size := int32(0)       // TODO: handle sparse size
+		msg.SparseSize = &size // TODO: handle sparse size
+		msg.SparseData = nil   // TODO: use sparse data
+		return msg
 	}
 
 	// dense:
-	precision := int32(s.precision)
-	return &pb.HyperLogLogPlusUniqueStateProto{
-		PrecisionOrNumBuckets: &precision,
-		Data:                  s.normal,
-	}
+	msg.Data = s.normal
+	return msg
 }
