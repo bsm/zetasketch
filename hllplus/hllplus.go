@@ -84,6 +84,11 @@ func (s *HLL) Merge(other *HLL) {
 		return
 	}
 
+	// Make sure receiver is allocated.
+	if len(s.normal) == 0 {
+		s.normal = make([]byte, 1<<s.precision)
+	}
+
 	// If other precision is higher.
 	if s.precision < other.precision {
 		other.eachRhoWDowngrade(s.precision, func(index int, rhoW uint8) {
