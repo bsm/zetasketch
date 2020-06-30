@@ -17,6 +17,7 @@ const (
 // HLL is a HyperLogLog++ sketch implementation.
 type HLL struct {
 	normal []byte
+	sparse *sparseState
 
 	precision       uint8
 	sparsePrecision uint8
@@ -31,7 +32,11 @@ func New(precision, sparsePrecision uint8) (*HLL, error) {
 		return nil, err
 	}
 
-	return &HLL{precision: precision, sparsePrecision: sparsePrecision}, nil
+	return &HLL{
+		precision:       precision,
+		sparsePrecision: sparsePrecision,
+		sparse:          newSparseState(precision, sparsePrecision),
+	}, nil
 }
 
 // NewFromProto inits/restores a sketch from proto message.
@@ -66,10 +71,15 @@ func (s *HLL) SparsePrecision() uint8 {
 
 // Add adds the uniform hash value to the representation.
 func (s *HLL) Add(hash uint64) {
-	s.ensureNormal()
+	if s.sparse != nil {
+		if s.sparse.Add(hash); s.sparse.OverMax() {
+			s.normalize()
+		}
+		return
+	}
 
-	pos := calcIndex(hash, s.precision)
-	rho := calcRhoW(hash, s.precision)
+	s.ensureNormal()
+	pos, rho := computePosRhoW(hash, s.precision)
 	if rho > s.normal[pos] {
 		s.normal[pos] = rho
 	}
@@ -82,14 +92,23 @@ func (s *HLL) Merge(other *HLL) {
 		return
 	}
 
+	// FIXME: allow sparse merge
+	if s.sparse != nil {
+		s.normalize()
+	}
+	if other.sparse != nil {
+		other = other.Clone()
+		other.normalize()
+	}
+
 	// Make sure receiver is allocated.
 	s.ensureNormal()
 
 	// If other precision is higher.
 	if s.precision < other.precision {
-		other.eachRhoWDowngrade(s.precision, func(index int, rhoW uint8) {
-			if s.normal[index] < rhoW {
-				s.normal[index] = rhoW
+		other.downgradeEach(s.precision, func(pos int, rhoW uint8) {
+			if s.normal[pos] < rhoW {
+				s.normal[pos] = rhoW
 			}
 		})
 		return
@@ -113,6 +132,7 @@ func (s *HLL) Clone() *HLL {
 	clone := &HLL{
 		precision:       s.precision,
 		sparsePrecision: s.sparsePrecision,
+		sparse:          s.sparse.Clone(),
 	}
 	if len(s.normal) != 0 {
 		clone.normal = make([]byte, len(s.normal))
@@ -124,6 +144,11 @@ func (s *HLL) Clone() *HLL {
 // Estimate computes the cardinality estimate according to the algorithm in Figure 6 of the HLL++ paper
 // (https://goo.gl/pc916Z).
 func (s *HLL) Estimate() int64 {
+	if s.sparse != nil {
+		s.sparse.Flush()
+		return s.sparse.Estimate()
+	}
+
 	if len(s.normal) == 0 {
 		return 0
 	}
@@ -175,9 +200,9 @@ func (s *HLL) Downgrade(precision, sparsePrecision uint8) error {
 	if s.precision > precision {
 		if len(s.normal) != 0 {
 			normal := make([]byte, 1<<precision)
-			s.eachRhoWDowngrade(precision, func(index int, rhoW uint8) {
-				if normal[index] < rhoW {
-					normal[index] = rhoW
+			s.downgradeEach(precision, func(pos int, rhoW uint8) {
+				if normal[pos] < rhoW {
+					normal[pos] = rhoW
 				}
 			})
 			s.normal = normal
@@ -191,17 +216,21 @@ func (s *HLL) Downgrade(precision, sparsePrecision uint8) error {
 	return nil
 }
 
+func (s *HLL) normalize() {
+	s.sparse = nil
+}
+
 func (s *HLL) ensureNormal() {
 	if len(s.normal) == 0 {
 		s.normal = make([]byte, 1<<s.precision)
 	}
 }
 
-func (s *HLL) eachRhoWDowngrade(targetPrecision uint8, iter func(int, uint8)) {
-	for idx, rho := range s.normal {
-		newI := idx >> (s.precision - targetPrecision)
-		newR := downgradeRhoW(idx, rho, s.precision, targetPrecision)
-		iter(newI, newR)
+func (s *HLL) downgradeEach(targetPrecision uint8, iter func(int, uint8)) {
+	for pos, rho := range s.normal {
+		pos2 := pos >> (s.precision - targetPrecision)
+		rho2 := normalDowngrade(pos, rho, s.precision, targetPrecision)
+		iter(pos2, rho2)
 	}
 }
 
@@ -211,6 +240,9 @@ func validate(precision, sparsePrecision uint8) error {
 	}
 	if sparsePrecision > MaxSparsePrecision {
 		return fmt.Errorf("invalid sparse precision %d", sparsePrecision)
+	}
+	if sparsePrecision < precision {
+		return fmt.Errorf("invalid sparse precision %d: must be >= normal precision %d", sparsePrecision, precision)
 	}
 	return nil
 }

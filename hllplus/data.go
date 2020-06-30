@@ -18,6 +18,7 @@ package hllplus
 
 import (
 	"math"
+	"math/bits"
 	"sort"
 )
 
@@ -30,6 +31,21 @@ const (
 // The number of neighbors that should be considered in the k-nearest neighbor algorithm to
 // determine the bias.
 const knnNumNeighbors = 6
+
+// Returns the HyperLogLog++ index pos and ρ(w) for the given hash.
+func computePosRhoW(hash uint64, precision uint8) (uint32, uint8) {
+	offset := 64 - precision
+	return uint32(hash >> offset), computeRhoW(hash, offset)
+}
+
+func computeRhoW(hash uint64, offset uint8) uint8 {
+	// Strip of the index and move the rhoW to a higher order.
+	w := hash << (64 - offset)
+	if w == 0 {
+		return offset + 1
+	}
+	return uint8(bits.LeadingZeros64(w)) + 1
+}
 
 /**
 * Means of the empirically determined bias corrections. These values have been determined in a

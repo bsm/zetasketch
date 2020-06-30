@@ -27,7 +27,7 @@ var _ = Describe("HLL", func() {
 	})
 
 	It("should estimate uniques", func() {
-		Expect(subject.Result()).To(BeNumerically("==", 1_003))
+		Expect(subject.Result()).To(BeNumerically("==", 1_000))
 	})
 
 	It("should merge", func() {
