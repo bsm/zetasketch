@@ -21,10 +21,11 @@ var _ = Describe("HLL", func() {
 
 	DescribeTable("estimate normal (800 unique)",
 		func(p int, exp int) {
-			subject, _ = hllplus.New(uint8(p), 20)
+			subject, _ = hllplus.NewNormal(uint8(p))
 			for i := 0; i < 800; i++ {
 				subject.Add(rnd.Uint64())
 			}
+			Expect(subject.IsSparse()).To(BeFalse())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
 		Entry("p=10", 10, 800),
@@ -38,12 +39,32 @@ var _ = Describe("HLL", func() {
 		Entry("p=18", 18, 799),
 	)
 
+	DescribeTable("estimate sparse (800 unique)",
+		func(p int, exp int) {
+			subject, _ = hllplus.New(uint8(p-5), uint8(p))
+			for i := 0; i < 800; i++ {
+				subject.Add(rnd.Uint64())
+			}
+			Expect(subject.IsSparse()).To(BeTrue())
+			Expect(subject.Estimate()).To(Equal(int64(exp)))
+		},
+		Entry("p=16", 16, 799),
+		Entry("p=17", 17, 798),
+		Entry("p=18", 18, 799),
+		Entry("p=19", 19, 799),
+		Entry("p=20", 20, 799),
+		Entry("p=21", 21, 799),
+		Entry("p=22", 22, 800),
+		Entry("p=23", 23, 800),
+	)
+
 	DescribeTable("estimate normal (200k unique)",
 		func(p int, exp int) {
-			subject, _ = hllplus.New(uint8(p), 20)
+			subject, _ = hllplus.NewNormal(uint8(p))
 			for i := 0; i < 200_000; i++ {
 				subject.Add(rnd.Uint64())
 			}
+			Expect(subject.IsSparse()).To(BeFalse())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
 		Entry("p=10", 10, 199197),
@@ -63,9 +84,22 @@ var _ = Describe("HLL", func() {
 		Entry("p=24", 24, 200026),
 	)
 
+	DescribeTable("estimate sparse (200k unique)",
+		func(p int, exp int) {
+			subject, _ = hllplus.New(uint8(p-5), uint8(p))
+			for i := 0; i < 200_000; i++ {
+				subject.Add(rnd.Uint64())
+			}
+			Expect(subject.IsSparse()).To(BeTrue())
+			Expect(subject.Estimate()).To(Equal(int64(exp)))
+		},
+		Entry("p=24", 24, 200535),
+		Entry("p=25", 25, 200048),
+	)
+
 	DescribeTable("estimate normal (100k unique + 2x50k)",
 		func(p int, exp int) {
-			subject, _ = hllplus.New(uint8(p), 20)
+			subject, _ = hllplus.NewNormal(uint8(p))
 			for i := 0; i < 100_000; i++ {
 				subject.Add(rnd.Uint64())
 			}
@@ -74,6 +108,7 @@ var _ = Describe("HLL", func() {
 				subject.Add(h)
 				subject.Add(h)
 			}
+			Expect(subject.IsSparse()).To(BeFalse())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
 		Entry("p=10", 10, 148131),
@@ -93,9 +128,41 @@ var _ = Describe("HLL", func() {
 		Entry("p=24", 24, 149988),
 	)
 
+	DescribeTable("estimate sparse (100k unique + 2x50k)",
+		func(p int, exp int) {
+			subject, _ = hllplus.New(uint8(p-5), uint8(p))
+			for i := 0; i < 100_000; i++ {
+				subject.Add(rnd.Uint64())
+			}
+			for i := 0; i < 50_000; i++ {
+				h := rnd.Uint64()
+				subject.Add(h)
+				subject.Add(h)
+			}
+			Expect(subject.IsSparse()).To(BeTrue())
+			Expect(subject.Estimate()).To(Equal(int64(exp)))
+		},
+		Entry("p=23", 23, 150823),
+		Entry("p=24", 24, 150144),
+		Entry("p=25", 25, 150012),
+	)
+
+	FIt("should normalize", func() {
+		subject, _ = hllplus.New(12, 17)
+		for i := 0; i < 3_084; i++ {
+			subject.Add(rnd.Uint64())
+		}
+		Expect(subject.IsSparse()).To(BeTrue())
+		Expect(subject.Estimate()).To(BeNumerically("==", 3_108))
+
+		subject.Add(rnd.Uint64())
+		Expect(subject.IsSparse()).To(BeFalse())
+		Expect(subject.Estimate()).To(BeNumerically("==", 3_100))
+	})
+
 	It("should downgrade", func() {
-		s1, _ := hllplus.New(15, 20)
-		s2, _ := hllplus.New(12, 17)
+		s1, _ := hllplus.NewNormal(15)
+		s2, _ := hllplus.NewNormal(12)
 
 		for i := 0; i < 100_000; i++ {
 			n := rnd.Uint64()
@@ -120,9 +187,9 @@ var _ = Describe("HLL", func() {
 		var s1, s2, s3 *hllplus.HLL
 
 		BeforeEach(func() {
-			s1, _ = hllplus.New(15, 20)
-			s2, _ = hllplus.New(15, 20)
-			s3, _ = hllplus.New(12, 17)
+			s1, _ = hllplus.NewNormal(15)
+			s2, _ = hllplus.NewNormal(15)
+			s3, _ = hllplus.NewNormal(12)
 
 			for i := 0; i < 50_000; i++ {
 				n := rnd.Uint64()
@@ -161,7 +228,7 @@ var _ = Describe("HLL", func() {
 		})
 
 		It("should succeed if target is empty", func() {
-			subject, _ = hllplus.New(15, 20)
+			subject, _ = hllplus.NewNormal(15)
 			Expect(func() { subject.Merge(s1) }).NotTo(Panic())
 
 			// just a straight copy of s1:
@@ -171,11 +238,13 @@ var _ = Describe("HLL", func() {
 		})
 	})
 
-	It("should return / init from proto", func() {
+	It("should init from proto", func() {
 		subject, _ = hllplus.New(12, 17)
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 10_000; i++ {
 			subject.Add(rnd.Uint64())
 		}
+		Expect(subject.IsSparse()).To(BeFalse())
+		Expect(subject.Estimate()).To(BeNumerically("==", 6_843))
 
 		msg := subject.Proto()
 
@@ -193,9 +262,10 @@ var _ = Describe("HLL", func() {
 		// init back from proto:
 		subject, err := hllplus.NewFromProto(msg)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(subject.IsSparse()).To(BeFalse())
 		Expect(subject.Precision()).To(BeNumerically("==", 12))
 		Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
-		Expect(subject.Estimate()).To(BeNumerically("==", 10))
+		Expect(subject.Estimate()).To(BeNumerically("==", 6_843))
 	})
 })
 
