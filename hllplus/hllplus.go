@@ -41,22 +41,24 @@ func New(precision, sparsePrecision uint8) (*HLL, error) {
 
 // NewFromProto inits/restores a sketch from proto message.
 func NewFromProto(msg *pb.HyperLogLogPlusUniqueStateProto) (*HLL, error) {
-	if len(msg.SparseData) > 0 {
-		// TODO: handle proto for sparse data.
-		return nil, fmt.Errorf("sparse representation is not supported yet")
-	}
-
 	precision := uint8(msg.GetPrecisionOrNumBuckets())
 	sparsePrecision := uint8(msg.GetSparsePrecisionOrNumBuckets())
 	if err := validate(precision, sparsePrecision); err != nil {
 		return nil, err
 	}
 
-	return &HLL{
-		normal:          msg.Data,
+	h := &HLL{
 		precision:       precision,
 		sparsePrecision: sparsePrecision,
-	}, nil
+	}
+
+	if len(msg.SparseData) > 0 {
+		h.sparse = newSparseStateFromData(precision, sparsePrecision, msg.SparseData, int(msg.GetSparseSize()))
+	} else {
+		h.normal = msg.Data
+	}
+
+	return h, nil
 }
 
 // Precision returns the normal precision.
@@ -88,7 +90,7 @@ func (s *HLL) Add(hash uint64) {
 // Merge merges other into s.
 func (s *HLL) Merge(other *HLL) {
 	// Skip if there is nothing to merge.
-	if len(other.normal) == 0 {
+	if len(other.normal) == 0 && other.sparse == nil {
 		return
 	}
 
@@ -197,6 +199,8 @@ func (s *HLL) Downgrade(precision, sparsePrecision uint8) error {
 		return err
 	}
 
+	// TODO: downgrade sparse as well (and don't forget a switch between normal and sparse)
+
 	if s.precision > precision {
 		if len(s.normal) != 0 {
 			normal := make([]byte, 1<<precision)
@@ -217,6 +221,16 @@ func (s *HLL) Downgrade(precision, sparsePrecision uint8) error {
 }
 
 func (s *HLL) normalize() {
+	if s.sparse == nil {
+		return
+	}
+
+	s.ensureNormal()
+	s.sparse.Iterate(func(pos int, rhoW uint8) {
+		if rhoW > s.normal[pos] {
+			s.normal[pos] = rhoW
+		}
+	})
 	s.sparse = nil
 }
 
@@ -257,15 +271,13 @@ func (s *HLL) Proto() *pb.HyperLogLogPlusUniqueStateProto {
 		SparsePrecisionOrNumBuckets: &sparsePrecision,
 	}
 
-	if false { // TODO: handle sparse
-		// sparse:
-		size := int32(0)       // TODO: handle sparse size
-		msg.SparseSize = &size // TODO: handle sparse size
-		msg.SparseData = nil   // TODO: use sparse data
-		return msg
+	if s.sparse != nil {
+		data, size := s.sparse.GetData()
+		size32 := int32(size)
+		msg.SparseSize = &size32
+		msg.SparseData = data
+	} else {
+		msg.Data = s.normal
 	}
-
-	// dense:
-	msg.Data = s.normal
 	return msg
 }

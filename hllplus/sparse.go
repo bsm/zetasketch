@@ -7,7 +7,10 @@ import (
 	"sync"
 )
 
-const sparseRhoWBits = 6
+const (
+	sparseRhoWBits = 6
+	sparseRhowMask = (1 << sparseRhoWBits) - 1
+)
 
 type sparseState struct {
 	normalPrecision uint8
@@ -42,6 +45,12 @@ func newSparseState(normalPrecision, sparsePrecision uint8) *sparseState {
 		maxDataLen:   maxDataLen,
 		maxBufferLen: maxBufferLen,
 	}
+}
+
+func newSparseStateFromData(normalPrecision, sparsePrecision uint8, data []byte, size int) *sparseState {
+	s := newSparseState(normalPrecision, sparsePrecision)
+	s.data.SetData(data, size)
+	return s
 }
 
 func (s *sparseState) Add(hash uint64) {
@@ -108,6 +117,25 @@ func (s *sparseState) OverMax() bool {
 	return s.data.Len() > s.maxDataLen
 }
 
+func (s *sparseState) Iterate(cb func(pos int, rhoW uint8)) {
+	handle := func(n uint32) {
+		pos := s.decodeNormalIndex(n)
+		rhoW := s.decodeNormalRhoW(n)
+		cb(pos, rhoW)
+	}
+
+	s.data.Iterate(handle)
+
+	for n := range s.buffer {
+		handle(n)
+	}
+}
+
+func (s *sparseState) GetData() ([]byte, int) {
+	s.Flush()
+	return s.data.CopyBytes(), s.data.Count()
+}
+
 func (s *sparseState) encode(hash uint64) uint32 {
 	sparsePos, rho := computePosRhoW(hash, s.sparsePrecision)
 	delta := s.sparsePrecision - s.normalPrecision
@@ -122,6 +150,33 @@ func (s *sparseState) encode(hash uint64) uint32 {
 	// anyway (see the mask above).
 	normPos := sparsePos >> delta
 	return s.encodedFlag | normPos<<sparseRhoWBits | uint32(rho)
+}
+
+// TODO: should we squash decodeNormalXXX into single func with 2 retvals?
+func (s *sparseState) decodeNormalIndex(sparseValue uint32) int {
+	// Values without a sparse rhoW' consist of just the sparse index, so the normal index is
+	// determined by stripping off the last sp-p bits.
+	if sparseValue&s.encodedFlag == 0 {
+		return int(sparseValue >> (s.sparsePrecision - s.normalPrecision))
+	}
+
+	// Sparse rhoW' encoded values contain a normal index so we extract it by stripping the flag
+	// off the front and the rhoW' off the end.
+	return int((sparseValue ^ s.encodedFlag) >> sparseRhoWBits)
+}
+
+// TODO: should we squash decodeNormalXXX into single func with 2 retvals?
+func (s *sparseState) decodeNormalRhoW(sparseValue uint32) uint8 {
+	// If the rhoW' was not encoded, we can determine the normal rhoW from the last sp-p bits of
+	// the sparse index.
+	if (sparseValue & s.encodedFlag) == 0 {
+		// TODO: is it Ok just to cast `sparseValue` uint32 -> uint64?
+		return computeRhoW(uint64(sparseValue), s.sparsePrecision-s.normalPrecision)
+	}
+
+	// If the sparse rhoW' was encoded, this tells us that the last sp-p bits of the
+	// sparse index where all zero. The normal rhoW is therefore rhoW' + sp - p.
+	return uint8(sparseValue&sparseRhowMask) + s.sparsePrecision - s.normalPrecision
 }
 
 // --------------------------------------------------------------------
@@ -252,5 +307,20 @@ func (s *deltaSlice) Iterate(fn func(uint32)) {
 		x := u + last
 		fn(x)
 		last = x
+	})
+}
+
+func (s *deltaSlice) CopyBytes() []byte {
+	p := make([]byte, len(s.nums))
+	copy(p, s.nums)
+	return p
+}
+
+func (s *deltaSlice) SetData(p []byte, size int) {
+	s.nums = append(s.nums[:0], p...)
+	s.size = size
+
+	s.Iterate(func(n uint32) {
+		s.last = n
 	})
 }
