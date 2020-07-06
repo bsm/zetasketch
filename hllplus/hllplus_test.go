@@ -147,7 +147,7 @@ var _ = Describe("HLL", func() {
 		Entry("p=25", 25, 150012),
 	)
 
-	FIt("should normalize", func() {
+	It("should normalize", func() {
 		subject, _ = hllplus.New(12, 17)
 		for i := 0; i < 3_084; i++ {
 			subject.Add(rnd.Uint64())
@@ -157,7 +157,7 @@ var _ = Describe("HLL", func() {
 
 		subject.Add(rnd.Uint64())
 		Expect(subject.IsSparse()).To(BeFalse())
-		Expect(subject.Estimate()).To(BeNumerically("==", 3_100))
+		Expect(subject.Estimate()).To(BeNumerically("==", 3_072))
 	})
 
 	It("should downgrade", func() {
@@ -238,34 +238,66 @@ var _ = Describe("HLL", func() {
 		})
 	})
 
-	It("should init from proto", func() {
-		subject, _ = hllplus.New(12, 17)
-		for i := 0; i < 10_000; i++ {
-			subject.Add(rnd.Uint64())
-		}
-		Expect(subject.IsSparse()).To(BeFalse())
-		Expect(subject.Estimate()).To(BeNumerically("==", 6_843))
+	Describe("proto", func() {
+		It("should init normal", func() {
+			subject, _ = hllplus.New(12, 17)
+			for i := 0; i < 10_000; i++ {
+				subject.Add(rnd.Uint64())
+			}
+			Expect(subject.IsSparse()).To(BeFalse())
+			Expect(subject.Estimate()).To(BeNumerically("==", 9_914))
 
-		msg := subject.Proto()
+			msg := subject.Proto()
 
-		// both precisions are always stored:
-		Expect(msg.GetPrecisionOrNumBuckets()).To(BeNumerically("==", 12))
-		Expect(msg.GetSparsePrecisionOrNumBuckets()).To(BeNumerically("==", 17))
+			// both precisions are always stored:
+			Expect(msg.GetPrecisionOrNumBuckets()).To(BeNumerically("==", 12))
+			Expect(msg.GetSparsePrecisionOrNumBuckets()).To(BeNumerically("==", 17))
 
-		// expect dense representation:
-		Expect(msg.GetData()).NotTo(BeEmpty()) // TODO: maybe better check exact value?
+			// expect normal representation:
+			Expect(msg.GetData()).NotTo(BeEmpty())
 
-		// expect NO sparse representation:
-		Expect(msg.SparseSize).To(BeNil())
-		Expect(msg.GetSparseData()).To(BeNil())
+			// expect NO sparse representation:
+			Expect(msg.SparseSize).To(BeNil())
+			Expect(msg.GetSparseData()).To(BeNil())
 
-		// init back from proto:
-		subject, err := hllplus.NewFromProto(msg)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(subject.IsSparse()).To(BeFalse())
-		Expect(subject.Precision()).To(BeNumerically("==", 12))
-		Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
-		Expect(subject.Estimate()).To(BeNumerically("==", 6_843))
+			// init back from proto:
+			subject, err := hllplus.NewFromProto(msg)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(subject.IsSparse()).To(BeFalse())
+			Expect(subject.Precision()).To(BeNumerically("==", 12))
+			Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
+			Expect(subject.Estimate()).To(BeNumerically("==", 9_914))
+		})
+
+		It("should init sparse", func() {
+			subject, _ = hllplus.New(12, 17)
+			for i := 0; i < 800; i++ {
+				subject.Add(rnd.Uint64())
+			}
+			Expect(subject.IsSparse()).To(BeTrue())
+			Expect(subject.Estimate()).To(BeNumerically("==", 798))
+
+			msg := subject.Proto()
+
+			// both precisions are always stored:
+			Expect(msg.GetPrecisionOrNumBuckets()).To(BeNumerically("==", 12))
+			Expect(msg.GetSparsePrecisionOrNumBuckets()).To(BeNumerically("==", 17))
+
+			// expect NO normal representation:
+			Expect(msg.GetData()).To(BeEmpty())
+
+			// expect sparse representation:
+			Expect(msg.GetSparseSize()).To(BeNumerically("==", 796)) // TODO: eh, shouldn't it be exactly 800???
+			Expect(msg.GetSparseData()).NotTo(BeEmpty())
+
+			// init back from proto:
+			subject, err := hllplus.NewFromProto(msg)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(subject.IsSparse()).To(BeTrue())
+			Expect(subject.Precision()).To(BeNumerically("==", 12))
+			Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
+			Expect(subject.Estimate()).To(BeNumerically("==", 798))
+		})
 	})
 })
 
