@@ -287,7 +287,7 @@ var _ = Describe("HLL", func() {
 			Expect(msg.GetData()).To(BeEmpty())
 
 			// expect sparse representation:
-			Expect(msg.GetSparseSize()).To(BeNumerically("==", 796)) // TODO: eh, shouldn't it be exactly 800???
+			Expect(msg.GetSparseSize()).To(BeNumerically("==", 796)) // hash/rand collisions are fine, that's why it is != 800
 			Expect(msg.GetSparseData()).NotTo(BeEmpty())
 
 			// init back from proto:
