@@ -126,7 +126,8 @@ func (s *sparseState) Iterate(cb func(pos uint32, rhoW uint8)) {
 
 func (s *sparseState) GetData() ([]byte, int) {
 	s.Flush()
-	return s.data.CopyBytes(), s.data.Count()
+	d := s.data.Clone()
+	return d.Bytes(), d.Count()
 }
 
 func (s *sparseState) encode(hash uint64) uint32 {
@@ -302,10 +303,8 @@ func (s *deltaSlice) Iterate(fn func(uint32)) {
 	})
 }
 
-func (s *deltaSlice) CopyBytes() []byte {
-	p := make([]byte, len(s.nums))
-	copy(p, s.nums)
-	return p
+func (s *deltaSlice) Bytes() []byte {
+	return s.nums
 }
 
 func (s *deltaSlice) SetData(p []byte) {
