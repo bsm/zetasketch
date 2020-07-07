@@ -35,7 +35,7 @@ func New(precision, sparsePrecision uint8) (*HLL, error) {
 	return &HLL{
 		precision:       precision,
 		sparsePrecision: sparsePrecision,
-		sparse:          newSparseState(precision, sparsePrecision),
+		sparse:          newSparseState(precision, sparsePrecision, nil),
 	}, nil
 }
 
@@ -53,7 +53,7 @@ func NewFromProto(msg *pb.HyperLogLogPlusUniqueStateProto) (*HLL, error) {
 	}
 
 	if len(msg.SparseData) > 0 {
-		h.sparse = newSparseStateFromData(precision, sparsePrecision, msg.SparseData, int(msg.GetSparseSize()))
+		h.sparse = newSparseState(precision, sparsePrecision, msg.SparseData)
 	} else {
 		h.normal = msg.Data
 	}
@@ -274,7 +274,7 @@ func (s *HLL) Proto() *pb.HyperLogLogPlusUniqueStateProto {
 	if s.sparse != nil {
 		data, size := s.sparse.GetData()
 		size32 := int32(size)
-		msg.SparseSize = &size32
+		msg.SparseSize = &size32 // populated to be compatible with zetasketch/BigQuery
 		msg.SparseData = data
 	} else {
 		msg.Data = s.normal
