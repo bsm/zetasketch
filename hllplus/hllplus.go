@@ -226,7 +226,7 @@ func (s *HLL) normalize() {
 	}
 
 	s.ensureNormal()
-	s.sparse.Iterate(func(pos int, rhoW uint8) {
+	s.sparse.Iterate(func(pos uint32, rhoW uint8) {
 		if rhoW > s.normal[pos] {
 			s.normal[pos] = rhoW
 		}

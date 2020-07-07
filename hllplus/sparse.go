@@ -117,7 +117,7 @@ func (s *sparseState) OverMax() bool {
 	return s.data.Len() > s.maxDataLen
 }
 
-func (s *sparseState) Iterate(cb func(pos int, rhoW uint8)) {
+func (s *sparseState) Iterate(cb func(pos uint32, rhoW uint8)) {
 	handle := func(n uint32) {
 		pos := s.decodeNormalIndex(n)
 		rhoW := s.decodeNormalRhoW(n)
@@ -125,10 +125,7 @@ func (s *sparseState) Iterate(cb func(pos int, rhoW uint8)) {
 	}
 
 	s.data.Iterate(handle)
-
-	for n := range s.buffer {
-		handle(n)
-	}
+	s.buffer.Iterate(handle)
 }
 
 func (s *sparseState) GetData() ([]byte, int) {
@@ -153,16 +150,16 @@ func (s *sparseState) encode(hash uint64) uint32 {
 }
 
 // TODO: should we squash decodeNormalXXX into single func with 2 retvals?
-func (s *sparseState) decodeNormalIndex(sparseValue uint32) int {
+func (s *sparseState) decodeNormalIndex(sparseValue uint32) uint32 {
 	// Values without a sparse rhoW' consist of just the sparse index, so the normal index is
 	// determined by stripping off the last sp-p bits.
 	if sparseValue&s.encodedFlag == 0 {
-		return int(sparseValue >> (s.sparsePrecision - s.normalPrecision))
+		return sparseValue >> (s.sparsePrecision - s.normalPrecision)
 	}
 
 	// Sparse rhoW' encoded values contain a normal index so we extract it by stripping the flag
 	// off the front and the rhoW' off the end.
-	return int((sparseValue ^ s.encodedFlag) >> sparseRhoWBits)
+	return (sparseValue ^ s.encodedFlag) >> sparseRhoWBits
 }
 
 // TODO: should we squash decodeNormalXXX into single func with 2 retvals?
@@ -170,7 +167,6 @@ func (s *sparseState) decodeNormalRhoW(sparseValue uint32) uint8 {
 	// If the rhoW' was not encoded, we can determine the normal rhoW from the last sp-p bits of
 	// the sparse index.
 	if (sparseValue & s.encodedFlag) == 0 {
-		// TODO: is it Ok just to cast `sparseValue` uint32 -> uint64?
 		return computeRhoW(uint64(sparseValue), s.sparsePrecision-s.normalPrecision)
 	}
 
@@ -211,6 +207,12 @@ func (s uint32Set) Flush() []uint32 {
 	}
 	sort.Sort(nums)
 	return nums
+}
+
+func (s uint32Set) Iterate(cb func(n uint32)) {
+	for n := range s {
+		cb(n)
+	}
 }
 
 type uint32Slice []uint32
@@ -316,11 +318,12 @@ func (s *deltaSlice) CopyBytes() []byte {
 	return p
 }
 
-func (s *deltaSlice) SetData(p []byte, size int) {
+func (s *deltaSlice) SetData(p []byte) {
 	s.nums = append(s.nums[:0], p...)
-	s.size = size
+	s.size = 0
 
 	s.Iterate(func(n uint32) {
 		s.last = n
+		s.size++
 	})
 }
