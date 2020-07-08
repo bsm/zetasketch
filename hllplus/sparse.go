@@ -98,14 +98,16 @@ func (s *sparseState) Flush() {
 		for len(buffered) > 0 {
 			b := buffered[0]
 
-			// shift buffered element:
 			if b <= x {
+				// shift buffered element so it is not used on next iteration
 				buffered = buffered[1:]
 			}
 
 			if b < x {
+				// append all buffered elements, smaller than stored one
 				result.Append(b)
 			} else {
+				// append last element (stored, largest one)
 				result.Append(x)
 				break
 			}
