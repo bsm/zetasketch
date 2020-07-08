@@ -150,12 +150,14 @@ var _ = Describe("HLL", func() {
 	It("should estimate sparse (repetitive)", func() {
 		subject, _ = hllplus.New(12, 17)
 
+		// same element added again and again - Add(N), Estimate() -> Flush(), repeat:
 		for i := 0; i < 100; i++ {
 			subject.Add(1)
 			Expect(subject.Estimate()).To(BeNumerically("==", 1))
 		}
 
-		Expect(subject.IsSparse()).To(BeTrue()) // sanity check that HLL has not been normalized
+		// sanity check that HLL has not been normalized:
+		Expect(subject.IsSparse()).To(BeTrue())
 	})
 
 	It("should normalize", func() {

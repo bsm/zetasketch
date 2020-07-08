@@ -60,6 +60,8 @@ func (s *sparseState) Add(hash uint64) {
 
 // Linear counting over the number of empty sparse buckets.
 func (s *sparseState) Estimate() int64 {
+	s.Flush()
+
 	mm := 1 << s.sparsePrecision
 	numBuckets := float64(mm)
 	numZeros := numBuckets - float64(s.data.Count())
