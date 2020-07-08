@@ -108,7 +108,7 @@ func (s *HLL) Merge(other *HLL) {
 
 	// If other precision is higher.
 	if s.precision < other.precision {
-		other.downgradeEach(s.precision, func(pos int, rhoW uint8) {
+		other.downgradeEach(s.precision, func(pos uint32, rhoW uint8) {
 			if s.normal[pos] < rhoW {
 				s.normal[pos] = rhoW
 			}
@@ -204,7 +204,7 @@ func (s *HLL) Downgrade(precision, sparsePrecision uint8) error {
 	if s.precision > precision {
 		if len(s.normal) != 0 {
 			normal := make([]byte, 1<<precision)
-			s.downgradeEach(precision, func(pos int, rhoW uint8) {
+			s.downgradeEach(precision, func(pos uint32, rhoW uint8) {
 				if normal[pos] < rhoW {
 					normal[pos] = rhoW
 				}
@@ -240,11 +240,11 @@ func (s *HLL) ensureNormal() {
 	}
 }
 
-func (s *HLL) downgradeEach(targetPrecision uint8, iter func(int, uint8)) {
+func (s *HLL) downgradeEach(targetPrecision uint8, iter func(uint32, uint8)) {
 	for pos, rho := range s.normal {
 		pos2 := pos >> (s.precision - targetPrecision)
 		rho2 := normalDowngrade(pos, rho, s.precision, targetPrecision)
-		iter(pos2, rho2)
+		iter(uint32(pos2), rho2)
 	}
 }
 
