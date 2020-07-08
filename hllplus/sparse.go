@@ -112,21 +112,6 @@ func (s *sparseState) Flush() {
 				break
 			}
 		}
-
-		// var last *uint32 // last appended buffered element
-		// for {
-		// 	if len(buffered) > 0 && buffered[0] <= x {
-		// 		last = &buffered[0]
-		// 		result.Append(buffered[0])
-		// 		buffered = buffered[1:]
-		// 	} else {
-		// 		// append stored element only if it is not a duplicate of last appended:
-		// 		if last == nil || x != *last {
-		// 			result.Append(x)
-		// 		}
-		// 		break
-		// 	}
-		// }
 	})
 
 	// append remaining
