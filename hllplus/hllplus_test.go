@@ -48,7 +48,7 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeTrue())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
-		Entry("p=16", 16, 799),
+		Entry("p=16", 16, 796),
 		Entry("p=17", 17, 798),
 		Entry("p=18", 18, 799),
 		Entry("p=19", 19, 799),
@@ -93,7 +93,7 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeTrue())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
-		Entry("p=24", 24, 200535),
+		Entry("p=24", 24, 200040),
 		Entry("p=25", 25, 200048),
 	)
 
@@ -142,8 +142,8 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeTrue())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
-		Entry("p=23", 23, 150823),
-		Entry("p=24", 24, 150144),
+		Entry("p=23", 23, 149970),
+		Entry("p=24", 24, 149999),
 		Entry("p=25", 25, 150012),
 	)
 
@@ -153,7 +153,7 @@ var _ = Describe("HLL", func() {
 			subject.Add(rnd.Uint64())
 		}
 		Expect(subject.IsSparse()).To(BeTrue())
-		Expect(subject.Estimate()).To(BeNumerically("==", 3_108))
+		Expect(subject.Estimate()).To(BeNumerically("==", 3_085))
 
 		subject.Add(rnd.Uint64())
 		Expect(subject.IsSparse()).To(BeFalse())

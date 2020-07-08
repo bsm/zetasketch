@@ -289,6 +289,11 @@ func (s *deltaSlice) Clone() *deltaSlice {
 }
 
 func (s *deltaSlice) Append(x uint32) {
+	// duplicate element:
+	if x == s.last {
+		return
+	}
+
 	s.nums = s.nums.Append(x - s.last)
 	s.last = x
 	s.size++
