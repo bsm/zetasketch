@@ -52,6 +52,6 @@ var _ = Describe("HLL", func() {
 		subject = new(zetasketch.HLL)
 		Expect(subject.UnmarshalBinary(data)).To(Succeed())
 		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
-		Expect(subject.Result()).To(BeNumerically("==", 1_003))
+		Expect(subject.Result()).To(BeNumerically("==", 1_000))
 	})
 })
