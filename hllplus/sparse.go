@@ -90,15 +90,41 @@ func (s *sparseState) Flush() {
 
 	// merge existing data and buffered
 	s.data.Iterate(func(x uint32) {
-		for {
-			if len(buffered) != 0 && buffered[0] <= x {
-				result.Append(buffered[0])
+		if len(buffered) == 0 {
+			result.Append(x)
+			return
+		}
+
+		for len(buffered) > 0 {
+			b := buffered[0]
+
+			// shift buffered element:
+			if b <= x {
 				buffered = buffered[1:]
+			}
+
+			if b < x {
+				result.Append(b)
 			} else {
 				result.Append(x)
 				break
 			}
 		}
+
+		// var last *uint32 // last appended buffered element
+		// for {
+		// 	if len(buffered) > 0 && buffered[0] <= x {
+		// 		last = &buffered[0]
+		// 		result.Append(buffered[0])
+		// 		buffered = buffered[1:]
+		// 	} else {
+		// 		// append stored element only if it is not a duplicate of last appended:
+		// 		if last == nil || x != *last {
+		// 			result.Append(x)
+		// 		}
+		// 		break
+		// 	}
+		// }
 	})
 
 	// append remaining
@@ -289,11 +315,6 @@ func (s *deltaSlice) Clone() *deltaSlice {
 }
 
 func (s *deltaSlice) Append(x uint32) {
-	// duplicate element:
-	if x == s.last {
-		return
-	}
-
 	s.nums = s.nums.Append(x - s.last)
 	s.last = x
 	s.size++
