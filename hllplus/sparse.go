@@ -7,7 +7,10 @@ import (
 	"sync"
 )
 
-const sparseRhoWBits = 6
+const (
+	sparseRhoWBits = 6
+	sparseRhowMask = (1 << sparseRhoWBits) - 1
+)
 
 type sparseState struct {
 	normalPrecision uint8
@@ -21,7 +24,7 @@ type sparseState struct {
 	maxBufferLen int
 }
 
-func newSparseState(normalPrecision, sparsePrecision uint8) *sparseState {
+func newSparseState(normalPrecision, sparsePrecision uint8, state []byte) *sparseState {
 	m := 1 << normalPrecision
 	maxDataLen := m * 3 / 4
 	maxBufferLen := m / 4
@@ -31,11 +34,15 @@ func newSparseState(normalPrecision, sparsePrecision uint8) *sparseState {
 		encodedFlag = 1 << n
 	}
 
+	// restore state from passed data (optional):
+	data := recycleDeltaSlice(maxDataLen)
+	data.SetData(state)
+
 	return &sparseState{
 		normalPrecision: normalPrecision,
 		sparsePrecision: sparsePrecision,
 
-		data:   recycleDeltaSlice(maxDataLen),
+		data:   data,
 		buffer: make(uint32Set, maxBufferLen),
 
 		encodedFlag:  encodedFlag,
@@ -108,6 +115,21 @@ func (s *sparseState) OverMax() bool {
 	return s.data.Len() > s.maxDataLen
 }
 
+func (s *sparseState) Iterate(cb func(pos uint32, rhoW uint8)) {
+	handle := func(n uint32) {
+		cb(s.decode(n))
+	}
+
+	s.data.Iterate(handle)
+	s.buffer.Iterate(handle)
+}
+
+func (s *sparseState) GetData() ([]byte, int) {
+	s.Flush()
+	d := s.data.Clone()
+	return d.Bytes(), d.Count()
+}
+
 func (s *sparseState) encode(hash uint64) uint32 {
 	sparsePos, rho := computePosRhoW(hash, s.sparsePrecision)
 	delta := s.sparsePrecision - s.normalPrecision
@@ -122,6 +144,26 @@ func (s *sparseState) encode(hash uint64) uint32 {
 	// anyway (see the mask above).
 	normPos := sparsePos >> delta
 	return s.encodedFlag | normPos<<sparseRhoWBits | uint32(rho)
+}
+
+func (s *sparseState) decode(sparseValue uint32) (pos uint32, rhoW uint8) {
+	if sparseValue&s.encodedFlag == 0 {
+		// Values without a sparse rhoW' consist of just the sparse index, so the normal index is
+		// determined by stripping off the last sp-p bits.
+		pos = sparseValue >> (s.sparsePrecision - s.normalPrecision)
+		// If the rhoW' was not encoded, we can determine the normal rhoW from the last sp-p bits of
+		// the sparse index.
+		rhoW = computeRhoW(uint64(sparseValue), s.sparsePrecision-s.normalPrecision)
+		return pos, rhoW
+	}
+
+	// Sparse rhoW' encoded values contain a normal index so we extract it by stripping the flag
+	// off the front and the rhoW' off the end.
+	pos = (sparseValue ^ s.encodedFlag) >> sparseRhoWBits
+	// If the sparse rhoW' was encoded, this tells us that the last sp-p bits of the
+	// sparse index where all zero. The normal rhoW is therefore rhoW' + sp - p.
+	rhoW = uint8(sparseValue&sparseRhowMask) + s.sparsePrecision - s.normalPrecision
+	return pos, rhoW
 }
 
 // --------------------------------------------------------------------
@@ -156,6 +198,12 @@ func (s uint32Set) Flush() []uint32 {
 	}
 	sort.Sort(nums)
 	return nums
+}
+
+func (s uint32Set) Iterate(cb func(n uint32)) {
+	for n := range s {
+		cb(n)
+	}
 }
 
 type uint32Slice []uint32
@@ -252,5 +300,19 @@ func (s *deltaSlice) Iterate(fn func(uint32)) {
 		x := u + last
 		fn(x)
 		last = x
+	})
+}
+
+func (s *deltaSlice) Bytes() []byte {
+	return s.nums
+}
+
+func (s *deltaSlice) SetData(p []byte) {
+	s.nums = append(s.nums[:0], p...)
+	s.size = 0
+
+	s.Iterate(func(n uint32) {
+		s.last = n
+		s.size++
 	})
 }
