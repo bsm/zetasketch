@@ -48,7 +48,7 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeTrue())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
-		Entry("p=16", 16, 799),
+		Entry("p=16", 16, 795),
 		Entry("p=17", 17, 798),
 		Entry("p=18", 18, 799),
 		Entry("p=19", 19, 799),
@@ -93,7 +93,7 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeTrue())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
-		Entry("p=24", 24, 200535),
+		Entry("p=24", 24, 200039),
 		Entry("p=25", 25, 200048),
 	)
 
@@ -142,10 +142,23 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeTrue())
 			Expect(subject.Estimate()).To(Equal(int64(exp)))
 		},
-		Entry("p=23", 23, 150823),
-		Entry("p=24", 24, 150144),
+		Entry("p=23", 23, 149969),
+		Entry("p=24", 24, 149998),
 		Entry("p=25", 25, 150012),
 	)
+
+	It("should estimate sparse (repetitive)", func() {
+		subject, _ = hllplus.New(12, 17)
+
+		// same element added again and again - Add(N), Estimate() -> Flush(), repeat:
+		for i := 0; i < 100; i++ {
+			subject.Add(1)
+			Expect(subject.Estimate()).To(BeNumerically("==", 1))
+		}
+
+		// sanity check that HLL has not been normalized:
+		Expect(subject.IsSparse()).To(BeTrue())
+	})
 
 	It("should normalize", func() {
 		subject, _ = hllplus.New(12, 17)
@@ -153,7 +166,7 @@ var _ = Describe("HLL", func() {
 			subject.Add(rnd.Uint64())
 		}
 		Expect(subject.IsSparse()).To(BeTrue())
-		Expect(subject.Estimate()).To(BeNumerically("==", 3_108))
+		Expect(subject.Estimate()).To(BeNumerically("==", 3_083))
 
 		subject.Add(rnd.Uint64())
 		Expect(subject.IsSparse()).To(BeFalse())
@@ -245,7 +258,7 @@ var _ = Describe("HLL", func() {
 				subject.Add(rnd.Uint64())
 			}
 			Expect(subject.IsSparse()).To(BeFalse())
-			Expect(subject.Estimate()).To(BeNumerically("==", 9_914))
+			Expect(subject.Estimate()).To(BeNumerically("==", 9_912))
 
 			msg := subject.Proto()
 
@@ -266,7 +279,7 @@ var _ = Describe("HLL", func() {
 			Expect(subject.IsSparse()).To(BeFalse())
 			Expect(subject.Precision()).To(BeNumerically("==", 12))
 			Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
-			Expect(subject.Estimate()).To(BeNumerically("==", 9_914))
+			Expect(subject.Estimate()).To(BeNumerically("==", 9_912))
 		})
 
 		It("should init sparse", func() {

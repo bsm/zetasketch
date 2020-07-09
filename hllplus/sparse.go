@@ -60,6 +60,8 @@ func (s *sparseState) Add(hash uint64) {
 
 // Linear counting over the number of empty sparse buckets.
 func (s *sparseState) Estimate() int64 {
+	s.Flush()
+
 	mm := 1 << s.sparsePrecision
 	numBuckets := float64(mm)
 	numZeros := numBuckets - float64(s.data.Count())
@@ -90,11 +92,24 @@ func (s *sparseState) Flush() {
 
 	// merge existing data and buffered
 	s.data.Iterate(func(x uint32) {
-		for {
-			if len(buffered) != 0 && buffered[0] <= x {
-				result.Append(buffered[0])
+		if len(buffered) == 0 {
+			result.Append(x)
+			return
+		}
+
+		for len(buffered) > 0 {
+			b := buffered[0]
+
+			if b <= x {
+				// shift buffered element so it is not used on next iteration
 				buffered = buffered[1:]
+			}
+
+			if b < x {
+				// append all buffered elements, smaller than stored one
+				result.Append(b)
 			} else {
+				// append last element (stored, largest one)
 				result.Append(x)
 				break
 			}
