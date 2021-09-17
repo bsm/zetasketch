@@ -3,8 +3,8 @@ package zetasketch_test
 import (
 	"github.com/bsm/zetasketch"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/gomega"
 )
 
 var _ = Describe("HLL", func() {
