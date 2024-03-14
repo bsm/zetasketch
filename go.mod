@@ -1,6 +1,6 @@
 module github.com/bsm/zetasketch
 
-go 1.14
+go 1.19
 
 require (
 	github.com/bsm/ginkgo v1.16.4
