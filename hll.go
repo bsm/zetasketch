@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/bsm/zetasketch/hllplus"
-	"github.com/bsm/zetasketch/internal/zetasketch"
 	pb "github.com/bsm/zetasketch/internal/zetasketch"
 	"google.golang.org/protobuf/proto"
 )
@@ -85,7 +84,7 @@ func (h *HLL) proto() *pb.AggregatorStateProto {
 		EncodingVersion: &encodingVersion,
 		NumValues:       &numValues,
 	}
-	proto.SetExtension(msg, zetasketch.E_HyperloglogplusUniqueState, h.h.Proto())
+	proto.SetExtension(msg, pb.E_HyperloglogplusUniqueState, h.h.Proto())
 	return msg
 }
 
@@ -100,7 +99,7 @@ func (h *HLL) fromProto(msg *pb.AggregatorStateProto) error {
 		return fmt.Errorf("incompatible binary message: no num values")
 	}
 
-	ext := proto.GetExtension(msg, zetasketch.E_HyperloglogplusUniqueState)
+	ext := proto.GetExtension(msg, pb.E_HyperloglogplusUniqueState)
 	hState, ok := ext.(*pb.HyperLogLogPlusUniqueStateProto)
 	if !ok {
 		return fmt.Errorf("incompatible binary message: invalid HyperLogLog++ state")

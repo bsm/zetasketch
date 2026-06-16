@@ -1,57 +1,81 @@
 package zetasketch_test
 
 import (
-	"github.com/bsm/zetasketch"
+	"testing"
 
-	. "github.com/bsm/ginkgo"
-	. "github.com/bsm/gomega"
+	"github.com/bsm/zetasketch"
 )
 
-var _ = Describe("HLL", func() {
-	var subject *zetasketch.HLL
-	var _ zetasketch.Aggregator = subject
+var _ zetasketch.Aggregator = (*zetasketch.HLL)(nil)
 
-	BeforeEach(func() {
-		subject = zetasketch.NewHLL(nil)
+func newTestHLL() *zetasketch.HLL {
+	subject := zetasketch.NewHLL(nil)
+	for i := range 1_000 {
+		subject.Add(zetasketch.Uint64Value(uint64(i)))
+	}
+	for i := 500; i < 1_000; i++ {
+		subject.Add(zetasketch.Uint64Value(uint64(i)))
+	}
+	return subject
+}
 
-		for i := 0; i < 1_000; i++ {
-			subject.Add(zetasketch.Uint64Value(uint64(i)))
-		}
-		for i := 500; i < 1_000; i++ {
-			subject.Add(zetasketch.Uint64Value(uint64(i)))
-		}
-	})
+func TestHLL_NumValues(t *testing.T) {
+	subject := newTestHLL()
+	if got, exp := subject.NumValues(), int64(1_500); got != exp {
+		t.Errorf("got %d, want %d", got, exp)
+	}
+}
 
-	It("should count values", func() {
-		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
-	})
+func TestHLL_Result(t *testing.T) {
+	subject := newTestHLL()
+	if got, exp := subject.Result(), int64(1_000); got != exp {
+		t.Errorf("got %d, want %d", got, exp)
+	}
+}
 
-	It("should estimate uniques", func() {
-		Expect(subject.Result()).To(BeNumerically("==", 1_000))
-	})
+func TestHLL_Merge(t *testing.T) {
+	subject := newTestHLL()
 
-	It("should merge", func() {
-		other := zetasketch.NewHLL(nil)
-		for i := 800; i < 1_200; i++ {
-			other.Add(zetasketch.Uint64Value(uint64(i)))
-		}
+	other := zetasketch.NewHLL(nil)
+	for i := 800; i < 1_200; i++ {
+		other.Add(zetasketch.Uint64Value(uint64(i)))
+	}
 
-		Expect(subject.Merge(other)).To(Succeed())
-		Expect(subject.NumValues()).To(BeNumerically("==", 1_900))
-		Expect(subject.Result()).To(BeNumerically("==", 1_207))
+	if err := subject.Merge(other); err != nil {
+		t.Fatal(err)
+	}
+	if got, exp := subject.NumValues(), int64(1_900); got != exp {
+		t.Errorf("NumValues: got %d, want %d", got, exp)
+	}
+	if got, exp := subject.Result(), int64(1_207); got != exp {
+		t.Errorf("Result: got %d, want %d", got, exp)
+	}
 
-		// `other` is not modified:
-		Expect(other.NumValues()).To(BeNumerically("==", 400))
-		Expect(other.Result()).To(BeNumerically("==", 400))
-	})
+	// `other` is not modified:
+	if got, exp := other.NumValues(), int64(400); got != exp {
+		t.Errorf("other.NumValues: got %d, want %d", got, exp)
+	}
+	if got, exp := other.Result(), int64(400); got != exp {
+		t.Errorf("other.Result: got %d, want %d", got, exp)
+	}
+}
 
-	It("should marshal/unmarshal binary", func() {
-		data, err := subject.MarshalBinary()
-		Expect(err).NotTo(HaveOccurred())
+func TestHLL_MarshalBinary(t *testing.T) {
+	subject := newTestHLL()
 
-		subject = new(zetasketch.HLL)
-		Expect(subject.UnmarshalBinary(data)).To(Succeed())
-		Expect(subject.NumValues()).To(BeNumerically("==", 1_500))
-		Expect(subject.Result()).To(BeNumerically("==", 1_000))
-	})
-})
+	data, err := subject.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	subject = new(zetasketch.HLL)
+	if err := subject.UnmarshalBinary(data); err != nil {
+		t.Fatal(err)
+	}
+	if got, exp := subject.NumValues(), int64(1_500); got != exp {
+		t.Errorf("NumValues: got %d, want %d", got, exp)
+	}
+	if got, exp := subject.Result(), int64(1_000); got != exp {
+		t.Errorf("Result: got %d, want %d", got, exp)
+	}
+}

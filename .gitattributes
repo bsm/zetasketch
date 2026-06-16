@@ -1,0 +1,2 @@
+# Generated protobuf code: collapse in diffs/reviews and exclude from language stats.
+internal/zetasketch/*.pb.go linguist-generated=true

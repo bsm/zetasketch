@@ -22,7 +22,7 @@ func buildHLL(tb testing.TB, precision, sparsePrecision uint8, n int, seed int64
 	}
 
 	rnd := rand.New(rand.NewSource(seed))
-	for i := 0; i < n; i++ {
+	for range n {
 		h.Add(rnd.Uint64())
 	}
 	return h
@@ -102,12 +102,12 @@ var benchSink *hllplus.HLL
 func BenchmarkSparseLowCardinality(b *testing.B) {
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		h, err := hllplus.New(12, 17)
 		if err != nil {
 			b.Fatal(err)
 		}
-		for j := 0; j < 10; j++ {
+		for j := range 10 {
 			h.Add(uint64(j) * 0x9e3779b97f4a7c15)
 		}
 		benchSink = h
