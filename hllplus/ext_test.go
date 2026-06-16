@@ -6,10 +6,7 @@ func EstimateBias(e float64, p uint8) float64 {
 }
 
 func NewNormal(precision uint8) (*HLL, error) {
-	pp := precision + 5
-	if pp > MaxSparsePrecision {
-		pp = MaxSparsePrecision
-	}
+	pp := min(precision+5, MaxSparsePrecision)
 
 	s, err := New(precision, pp)
 	if err != nil {

@@ -44,7 +44,7 @@ func mm64(data []byte, seed uint64) uint64 {
 	h := seed ^ uint64(len(data))*c3
 
 	nblocks := len(data) / 8
-	for b := 0; b < nblocks; b++ {
+	for b := range nblocks {
 		k := load64(data[b*8:]) * c3
 		k = shiftMix(k) * c3
 
@@ -153,7 +153,7 @@ func shiftMix(v uint64) uint64 {
 	return v ^ (v >> 47)
 }
 
-/// Computes intermediate hash of 32 bytes of byte array from the given offset.
+// Computes intermediate hash of 32 bytes of byte array from the given offset.
 func weakHashLength32WithSeeds(data []byte, seedA, seedB uint64) (uint64, uint64) {
 	p1 := load64(data)
 	p2 := load64(data[8:])

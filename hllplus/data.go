@@ -17,7 +17,6 @@
 package hllplus
 
 import (
-	"math"
 	"math/bits"
 	"sort"
 )
@@ -748,9 +747,10 @@ func closestBiases(estimate float64, precision uint8) weightedBiases {
 
 	res := make(weightedBiases, 0, max-min)
 	for i := min; i < max; i++ {
+		d := means[i] - estimate
 		res = append(res, weightedBias{
 			Bias:     biases[i],
-			Distance: math.Pow(means[i]-estimate, 2),
+			Distance: d * d,
 		})
 	}
 

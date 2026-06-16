@@ -1,322 +1,489 @@
 package hllplus_test
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
 	"github.com/bsm/zetasketch/hllplus"
-
-	. "github.com/bsm/ginkgo"
-	. "github.com/bsm/ginkgo/extensions/table"
-	. "github.com/bsm/gomega"
 )
 
-var _ = Describe("HLL", func() {
-	var subject *hllplus.HLL
-	var rnd *rand.Rand
-
-	BeforeEach(func() {
-		rnd = rand.New(rand.NewSource(33))
-	})
-
-	DescribeTable("estimate normal (800 unique)",
-		func(p int, exp int) {
-			subject, _ = hllplus.NewNormal(uint8(p))
-			for i := 0; i < 800; i++ {
+func TestHLL_estimateNormal800(t *testing.T) {
+	cases := []struct {
+		p   int
+		exp int64
+	}{
+		{10, 800},
+		{11, 794},
+		{12, 788},
+		{13, 793},
+		{14, 791},
+		{15, 793},
+		{16, 795},
+		{17, 797},
+		{18, 799},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("p=%d", tc.p), func(t *testing.T) {
+			rnd := rand.New(rand.NewSource(33))
+			subject, _ := hllplus.NewNormal(uint8(tc.p))
+			for range 800 {
 				subject.Add(rnd.Uint64())
 			}
-			Expect(subject.IsSparse()).To(BeFalse())
-			Expect(subject.Estimate()).To(Equal(int64(exp)))
-		},
-		Entry("p=10", 10, 800),
-		Entry("p=11", 11, 794),
-		Entry("p=12", 12, 788),
-		Entry("p=13", 13, 793),
-		Entry("p=14", 14, 791),
-		Entry("p=15", 15, 793),
-		Entry("p=16", 16, 795),
-		Entry("p=17", 17, 797),
-		Entry("p=18", 18, 799),
-	)
+			if subject.IsSparse() {
+				t.Error("expected normal representation")
+			}
+			if got := subject.Estimate(); got != tc.exp {
+				t.Errorf("got %d, want %d", got, tc.exp)
+			}
+		})
+	}
+}
 
-	DescribeTable("estimate sparse (800 unique)",
-		func(p int, exp int) {
-			subject, _ = hllplus.New(uint8(p-5), uint8(p))
-			for i := 0; i < 800; i++ {
+func TestHLL_estimateSparse800(t *testing.T) {
+	cases := []struct {
+		p   int
+		exp int64
+	}{
+		{16, 795},
+		{17, 798},
+		{18, 799},
+		{19, 799},
+		{20, 799},
+		{21, 799},
+		{22, 800},
+		{23, 800},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("p=%d", tc.p), func(t *testing.T) {
+			rnd := rand.New(rand.NewSource(33))
+			subject, _ := hllplus.New(uint8(tc.p-5), uint8(tc.p))
+			for range 800 {
 				subject.Add(rnd.Uint64())
 			}
-			Expect(subject.IsSparse()).To(BeTrue())
-			Expect(subject.Estimate()).To(Equal(int64(exp)))
-		},
-		Entry("p=16", 16, 795),
-		Entry("p=17", 17, 798),
-		Entry("p=18", 18, 799),
-		Entry("p=19", 19, 799),
-		Entry("p=20", 20, 799),
-		Entry("p=21", 21, 799),
-		Entry("p=22", 22, 800),
-		Entry("p=23", 23, 800),
-	)
+			if !subject.IsSparse() {
+				t.Error("expected sparse representation")
+			}
+			if got := subject.Estimate(); got != tc.exp {
+				t.Errorf("got %d, want %d", got, tc.exp)
+			}
+		})
+	}
+}
 
-	DescribeTable("estimate normal (200k unique)",
-		func(p int, exp int) {
-			subject, _ = hllplus.NewNormal(uint8(p))
-			for i := 0; i < 200_000; i++ {
+func TestHLL_estimateNormal200k(t *testing.T) {
+	cases := []struct {
+		p   int
+		exp int64
+	}{
+		{10, 199197},
+		{11, 204855},
+		{12, 204356},
+		{13, 202958},
+		{14, 202977},
+		{15, 201496},
+		{16, 201398},
+		{17, 201208},
+		{18, 200999},
+		{19, 200567},
+		{20, 200032},
+		{21, 200013},
+		{22, 200003},
+		{23, 199989},
+		{24, 200026},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("p=%d", tc.p), func(t *testing.T) {
+			rnd := rand.New(rand.NewSource(33))
+			subject, _ := hllplus.NewNormal(uint8(tc.p))
+			for range 200_000 {
 				subject.Add(rnd.Uint64())
 			}
-			Expect(subject.IsSparse()).To(BeFalse())
-			Expect(subject.Estimate()).To(Equal(int64(exp)))
-		},
-		Entry("p=10", 10, 199197),
-		Entry("p=11", 11, 204855),
-		Entry("p=12", 12, 204356),
-		Entry("p=13", 13, 202958),
-		Entry("p=14", 14, 202977),
-		Entry("p=15", 15, 201496),
-		Entry("p=16", 16, 201398),
-		Entry("p=17", 17, 201208),
-		Entry("p=18", 18, 200999),
-		Entry("p=19", 19, 200567),
-		Entry("p=20", 20, 200032),
-		Entry("p=21", 21, 200013),
-		Entry("p=22", 22, 200003),
-		Entry("p=23", 23, 199989),
-		Entry("p=24", 24, 200026),
-	)
+			if subject.IsSparse() {
+				t.Error("expected normal representation")
+			}
+			if got := subject.Estimate(); got != tc.exp {
+				t.Errorf("got %d, want %d", got, tc.exp)
+			}
+		})
+	}
+}
 
-	DescribeTable("estimate sparse (200k unique)",
-		func(p int, exp int) {
-			subject, _ = hllplus.New(uint8(p-5), uint8(p))
-			for i := 0; i < 200_000; i++ {
+func TestHLL_estimateSparse200k(t *testing.T) {
+	cases := []struct {
+		p   int
+		exp int64
+	}{
+		{24, 200039},
+		{25, 200048},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("p=%d", tc.p), func(t *testing.T) {
+			rnd := rand.New(rand.NewSource(33))
+			subject, _ := hllplus.New(uint8(tc.p-5), uint8(tc.p))
+			for range 200_000 {
 				subject.Add(rnd.Uint64())
 			}
-			Expect(subject.IsSparse()).To(BeTrue())
-			Expect(subject.Estimate()).To(Equal(int64(exp)))
-		},
-		Entry("p=24", 24, 200039),
-		Entry("p=25", 25, 200048),
-	)
+			if !subject.IsSparse() {
+				t.Error("expected sparse representation")
+			}
+			if got := subject.Estimate(); got != tc.exp {
+				t.Errorf("got %d, want %d", got, tc.exp)
+			}
+		})
+	}
+}
 
-	DescribeTable("estimate normal (100k unique + 2x50k)",
-		func(p int, exp int) {
-			subject, _ = hllplus.NewNormal(uint8(p))
-			for i := 0; i < 100_000; i++ {
+func TestHLL_estimateNormal100k2x50k(t *testing.T) {
+	cases := []struct {
+		p   int
+		exp int64
+	}{
+		{10, 148131},
+		{11, 152153},
+		{12, 152338},
+		{13, 152453},
+		{14, 150853},
+		{15, 150458},
+		{16, 150811},
+		{17, 150795},
+		{18, 150592},
+		{19, 150265},
+		{20, 149879},
+		{21, 149939},
+		{22, 150005},
+		{23, 149946},
+		{24, 149988},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("p=%d", tc.p), func(t *testing.T) {
+			rnd := rand.New(rand.NewSource(33))
+			subject, _ := hllplus.NewNormal(uint8(tc.p))
+			for range 100_000 {
 				subject.Add(rnd.Uint64())
 			}
-			for i := 0; i < 50_000; i++ {
+			for range 50_000 {
 				h := rnd.Uint64()
 				subject.Add(h)
 				subject.Add(h)
 			}
-			Expect(subject.IsSparse()).To(BeFalse())
-			Expect(subject.Estimate()).To(Equal(int64(exp)))
-		},
-		Entry("p=10", 10, 148131),
-		Entry("p=11", 11, 152153),
-		Entry("p=12", 12, 152338),
-		Entry("p=13", 13, 152453),
-		Entry("p=14", 14, 150853),
-		Entry("p=15", 15, 150458),
-		Entry("p=16", 16, 150811),
-		Entry("p=17", 17, 150795),
-		Entry("p=18", 18, 150592),
-		Entry("p=19", 19, 150265),
-		Entry("p=20", 20, 149879),
-		Entry("p=21", 21, 149939),
-		Entry("p=22", 22, 150005),
-		Entry("p=23", 23, 149946),
-		Entry("p=24", 24, 149988),
-	)
+			if subject.IsSparse() {
+				t.Error("expected normal representation")
+			}
+			if got := subject.Estimate(); got != tc.exp {
+				t.Errorf("got %d, want %d", got, tc.exp)
+			}
+		})
+	}
+}
 
-	DescribeTable("estimate sparse (100k unique + 2x50k)",
-		func(p int, exp int) {
-			subject, _ = hllplus.New(uint8(p-5), uint8(p))
-			for i := 0; i < 100_000; i++ {
+func TestHLL_estimateSparse100k2x50k(t *testing.T) {
+	cases := []struct {
+		p   int
+		exp int64
+	}{
+		{23, 149969},
+		{24, 149998},
+		{25, 150012},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("p=%d", tc.p), func(t *testing.T) {
+			rnd := rand.New(rand.NewSource(33))
+			subject, _ := hllplus.New(uint8(tc.p-5), uint8(tc.p))
+			for range 100_000 {
 				subject.Add(rnd.Uint64())
 			}
-			for i := 0; i < 50_000; i++ {
+			for range 50_000 {
 				h := rnd.Uint64()
 				subject.Add(h)
 				subject.Add(h)
 			}
-			Expect(subject.IsSparse()).To(BeTrue())
-			Expect(subject.Estimate()).To(Equal(int64(exp)))
-		},
-		Entry("p=23", 23, 149969),
-		Entry("p=24", 24, 149998),
-		Entry("p=25", 25, 150012),
-	)
+			if !subject.IsSparse() {
+				t.Error("expected sparse representation")
+			}
+			if got := subject.Estimate(); got != tc.exp {
+				t.Errorf("got %d, want %d", got, tc.exp)
+			}
+		})
+	}
+}
 
-	It("should estimate sparse (repetitive)", func() {
-		subject, _ = hllplus.New(12, 17)
+func TestHLL_estimateSparseRepetitive(t *testing.T) {
+	subject, _ := hllplus.New(12, 17)
 
-		// same element added again and again - Add(N), Estimate() -> Flush(), repeat:
-		for i := 0; i < 100; i++ {
-			subject.Add(1)
-			Expect(subject.Estimate()).To(BeNumerically("==", 1))
+	// same element added again and again - Add(N), Estimate() -> Flush(), repeat:
+	for range 100 {
+		subject.Add(1)
+		if got := subject.Estimate(); got != 1 {
+			t.Fatalf("got %d, want 1", got)
 		}
+	}
 
-		// sanity check that HLL has not been normalized:
-		Expect(subject.IsSparse()).To(BeTrue())
-	})
+	// sanity check that HLL has not been normalized:
+	if !subject.IsSparse() {
+		t.Error("expected sparse representation")
+	}
+}
 
-	It("should normalize", func() {
-		subject, _ = hllplus.New(12, 17)
-		for i := 0; i < 3_084; i++ {
-			subject.Add(rnd.Uint64())
-		}
-		Expect(subject.IsSparse()).To(BeTrue())
-		Expect(subject.Estimate()).To(BeNumerically("==", 3_083))
-
+func TestHLL_normalize(t *testing.T) {
+	rnd := rand.New(rand.NewSource(33))
+	subject, _ := hllplus.New(12, 17)
+	for range 3_084 {
 		subject.Add(rnd.Uint64())
-		Expect(subject.IsSparse()).To(BeFalse())
-		Expect(subject.Estimate()).To(BeNumerically("==", 3_072))
-	})
+	}
+	if !subject.IsSparse() {
+		t.Error("expected sparse representation")
+	}
+	if got := subject.Estimate(); got != 3_083 {
+		t.Errorf("got %d, want 3083", got)
+	}
 
-	It("should downgrade", func() {
-		s1, _ := hllplus.NewNormal(15)
-		s2, _ := hllplus.NewNormal(12)
+	subject.Add(rnd.Uint64())
+	if subject.IsSparse() {
+		t.Error("expected normal representation")
+	}
+	if got := subject.Estimate(); got != 3_072 {
+		t.Errorf("got %d, want 3072", got)
+	}
+}
 
-		for i := 0; i < 100_000; i++ {
-			n := rnd.Uint64()
-			s1.Add(n)
-			s2.Add(n)
-		}
+func TestHLL_downgrade(t *testing.T) {
+	rnd := rand.New(rand.NewSource(33))
+	s1, _ := hllplus.NewNormal(15)
+	s2, _ := hllplus.NewNormal(12)
 
-		Expect(s1.Estimate()).To(Equal(int64(99879)))
-		Expect(s2.Estimate()).To(Equal(int64(100680)))
+	for range 100_000 {
+		n := rnd.Uint64()
+		s1.Add(n)
+		s2.Add(n)
+	}
 
-		Expect(s1.Precision()).To(Equal(uint8(15)))
-		Expect(s1.SparsePrecision()).To(Equal(uint8(20)))
-		Expect(s1.Downgrade(12, 17)).To(Succeed())
-		Expect(s1.Precision()).To(Equal(uint8(12)))
-		Expect(s1.SparsePrecision()).To(Equal(uint8(17)))
+	if got := s1.Estimate(); got != 99879 {
+		t.Errorf("s1.Estimate: got %d, want 99879", got)
+	}
+	if got := s2.Estimate(); got != 100680 {
+		t.Errorf("s2.Estimate: got %d, want 100680", got)
+	}
 
-		Expect(s1.Estimate()).To(Equal(int64(100680)))
-		Expect(s2.Estimate()).To(Equal(int64(100680)))
-	})
+	if got := s1.Precision(); got != 15 {
+		t.Errorf("s1.Precision: got %d, want 15", got)
+	}
+	if got := s1.SparsePrecision(); got != 20 {
+		t.Errorf("s1.SparsePrecision: got %d, want 20", got)
+	}
+	if err := s1.Downgrade(12, 17); err != nil {
+		t.Fatal(err)
+	}
+	if got := s1.Precision(); got != 12 {
+		t.Errorf("s1.Precision: got %d, want 12", got)
+	}
+	if got := s1.SparsePrecision(); got != 17 {
+		t.Errorf("s1.SparsePrecision: got %d, want 17", got)
+	}
 
-	Describe("merge", func() {
-		var s1, s2, s3 *hllplus.HLL
+	if got := s1.Estimate(); got != 100680 {
+		t.Errorf("s1.Estimate: got %d, want 100680", got)
+	}
+	if got := s2.Estimate(); got != 100680 {
+		t.Errorf("s2.Estimate: got %d, want 100680", got)
+	}
+}
 
-		BeforeEach(func() {
-			s1, _ = hllplus.NewNormal(15)
-			s2, _ = hllplus.NewNormal(15)
-			s3, _ = hllplus.NewNormal(12)
+// newMergeFixture builds three sketches sharing 50k values and adds 50k distinct
+// values to each, matching the original merge spec's BeforeEach.
+func newMergeFixture(t *testing.T) (s1, s2, s3 *hllplus.HLL) {
+	t.Helper()
 
-			for i := 0; i < 50_000; i++ {
-				n := rnd.Uint64()
-				s1.Add(n)
-				s2.Add(n)
-				s3.Add(n)
-			}
-			for i := 0; i < 50_000; i++ {
-				s1.Add(rnd.Uint64())
-				s2.Add(rnd.Uint64())
-				s3.Add(rnd.Uint64())
-			}
+	rnd := rand.New(rand.NewSource(33))
+	s1, _ = hllplus.NewNormal(15)
+	s2, _ = hllplus.NewNormal(15)
+	s3, _ = hllplus.NewNormal(12)
 
-			Expect(s1.Estimate()).To(Equal(int64(100324)))
-			Expect(s2.Estimate()).To(Equal(int64(100168)))
-			Expect(s3.Estimate()).To(Equal(int64(100464)))
-		})
+	for range 50_000 {
+		n := rnd.Uint64()
+		s1.Add(n)
+		s2.Add(n)
+		s3.Add(n)
+	}
+	for range 50_000 {
+		s1.Add(rnd.Uint64())
+		s2.Add(rnd.Uint64())
+		s3.Add(rnd.Uint64())
+	}
 
-		It("should support equal precision", func() {
-			s1.Merge(s2)
-			Expect(s1.Estimate()).To(Equal(int64(150794)))
-		})
+	if got := s1.Estimate(); got != 100324 {
+		t.Fatalf("s1.Estimate: got %d, want 100324", got)
+	}
+	if got := s2.Estimate(); got != 100168 {
+		t.Fatalf("s2.Estimate: got %d, want 100168", got)
+	}
+	if got := s3.Estimate(); got != 100464 {
+		t.Fatalf("s3.Estimate: got %d, want 100464", got)
+	}
+	return s1, s2, s3
+}
 
-		It("should support targets with lower precision", func() {
-			s1.Merge(s3)
-			Expect(s1.Estimate()).To(Equal(int64(154744)))
-			Expect(s1.Precision()).To(Equal(uint8(12)))
-			Expect(s1.SparsePrecision()).To(Equal(uint8(17)))
-		})
+func TestHLL_merge_equalPrecision(t *testing.T) {
+	s1, s2, _ := newMergeFixture(t)
+	s1.Merge(s2)
+	if got := s1.Estimate(); got != 150794 {
+		t.Errorf("got %d, want 150794", got)
+	}
+}
 
-		It("should support targets with higher precision", func() {
-			s3.Merge(s1)
-			Expect(s3.Estimate()).To(Equal(int64(154744)))
-			Expect(s3.Precision()).To(Equal(uint8(12)))
-			Expect(s3.SparsePrecision()).To(Equal(uint8(17)))
-		})
+func TestHLL_merge_lowerPrecisionTarget(t *testing.T) {
+	s1, _, s3 := newMergeFixture(t)
+	s1.Merge(s3)
+	if got := s1.Estimate(); got != 154744 {
+		t.Errorf("got %d, want 154744", got)
+	}
+	if got := s1.Precision(); got != 12 {
+		t.Errorf("Precision: got %d, want 12", got)
+	}
+	if got := s1.SparsePrecision(); got != 17 {
+		t.Errorf("SparsePrecision: got %d, want 17", got)
+	}
+}
 
-		It("should succeed if target is empty", func() {
-			subject, _ = hllplus.NewNormal(15)
-			Expect(func() { subject.Merge(s1) }).NotTo(Panic())
+func TestHLL_merge_higherPrecisionTarget(t *testing.T) {
+	s1, _, s3 := newMergeFixture(t)
+	s3.Merge(s1)
+	if got := s3.Estimate(); got != 154744 {
+		t.Errorf("got %d, want 154744", got)
+	}
+	if got := s3.Precision(); got != 12 {
+		t.Errorf("Precision: got %d, want 12", got)
+	}
+	if got := s3.SparsePrecision(); got != 17 {
+		t.Errorf("SparsePrecision: got %d, want 17", got)
+	}
+}
 
-			// just a straight copy of s1:
-			Expect(subject.Estimate()).To(Equal(s1.Estimate()))
-			Expect(subject.Precision()).To(Equal(s1.Precision()))
-			Expect(subject.SparsePrecision()).To(Equal(s1.SparsePrecision()))
-		})
-	})
+func TestHLL_merge_emptyTarget(t *testing.T) {
+	s1, _, _ := newMergeFixture(t)
 
-	Describe("proto", func() {
-		It("should init normal", func() {
-			subject, _ = hllplus.New(12, 17)
-			for i := 0; i < 10_000; i++ {
-				subject.Add(rnd.Uint64())
-			}
-			Expect(subject.IsSparse()).To(BeFalse())
-			Expect(subject.Estimate()).To(BeNumerically("==", 9_912))
+	subject, _ := hllplus.NewNormal(15)
+	subject.Merge(s1)
 
-			msg := subject.Proto()
+	// just a straight copy of s1:
+	if got, exp := subject.Estimate(), s1.Estimate(); got != exp {
+		t.Errorf("Estimate: got %d, want %d", got, exp)
+	}
+	if got, exp := subject.Precision(), s1.Precision(); got != exp {
+		t.Errorf("Precision: got %d, want %d", got, exp)
+	}
+	if got, exp := subject.SparsePrecision(), s1.SparsePrecision(); got != exp {
+		t.Errorf("SparsePrecision: got %d, want %d", got, exp)
+	}
+}
 
-			// both precisions are always stored:
-			Expect(msg.GetPrecisionOrNumBuckets()).To(BeNumerically("==", 12))
-			Expect(msg.GetSparsePrecisionOrNumBuckets()).To(BeNumerically("==", 17))
+func TestHLL_proto_initNormal(t *testing.T) {
+	rnd := rand.New(rand.NewSource(33))
+	subject, _ := hllplus.New(12, 17)
+	for range 10_000 {
+		subject.Add(rnd.Uint64())
+	}
+	if subject.IsSparse() {
+		t.Error("expected normal representation")
+	}
+	if got := subject.Estimate(); got != 9_912 {
+		t.Errorf("got %d, want 9912", got)
+	}
 
-			// expect normal representation:
-			Expect(msg.GetData()).NotTo(BeEmpty())
+	msg := subject.Proto()
 
-			// expect NO sparse representation:
-			Expect(msg.SparseSize).To(BeNil())
-			Expect(msg.GetSparseData()).To(BeNil())
+	// both precisions are always stored:
+	if got := msg.GetPrecisionOrNumBuckets(); got != 12 {
+		t.Errorf("precision: got %d, want 12", got)
+	}
+	if got := msg.GetSparsePrecisionOrNumBuckets(); got != 17 {
+		t.Errorf("sparse precision: got %d, want 17", got)
+	}
 
-			// init back from proto:
-			subject, err := hllplus.NewFromProto(msg)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(subject.IsSparse()).To(BeFalse())
-			Expect(subject.Precision()).To(BeNumerically("==", 12))
-			Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
-			Expect(subject.Estimate()).To(BeNumerically("==", 9_912))
-		})
+	// expect normal representation:
+	if len(msg.GetData()) == 0 {
+		t.Error("expected non-empty data")
+	}
 
-		It("should init sparse", func() {
-			subject, _ = hllplus.New(12, 17)
-			for i := 0; i < 800; i++ {
-				subject.Add(rnd.Uint64())
-			}
-			Expect(subject.IsSparse()).To(BeTrue())
-			Expect(subject.Estimate()).To(BeNumerically("==", 798))
+	// expect NO sparse representation:
+	if msg.SparseSize != nil {
+		t.Error("expected nil sparse size")
+	}
+	if msg.GetSparseData() != nil {
+		t.Error("expected nil sparse data")
+	}
 
-			msg := subject.Proto()
+	// init back from proto:
+	restored, err := hllplus.NewFromProto(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.IsSparse() {
+		t.Error("expected normal representation")
+	}
+	if got := restored.Precision(); got != 12 {
+		t.Errorf("precision: got %d, want 12", got)
+	}
+	if got := restored.SparsePrecision(); got != 17 {
+		t.Errorf("sparse precision: got %d, want 17", got)
+	}
+	if got := restored.Estimate(); got != 9_912 {
+		t.Errorf("got %d, want 9912", got)
+	}
+}
 
-			// both precisions are always stored:
-			Expect(msg.GetPrecisionOrNumBuckets()).To(BeNumerically("==", 12))
-			Expect(msg.GetSparsePrecisionOrNumBuckets()).To(BeNumerically("==", 17))
+func TestHLL_proto_initSparse(t *testing.T) {
+	rnd := rand.New(rand.NewSource(33))
+	subject, _ := hllplus.New(12, 17)
+	for range 800 {
+		subject.Add(rnd.Uint64())
+	}
+	if !subject.IsSparse() {
+		t.Error("expected sparse representation")
+	}
+	if got := subject.Estimate(); got != 798 {
+		t.Errorf("got %d, want 798", got)
+	}
 
-			// expect NO normal representation:
-			Expect(msg.GetData()).To(BeEmpty())
+	msg := subject.Proto()
 
-			// expect sparse representation:
-			Expect(msg.GetSparseSize()).To(BeNumerically("==", 796)) // hash/rand collisions are fine, that's why it is != 800
-			Expect(msg.GetSparseData()).NotTo(BeEmpty())
+	// both precisions are always stored:
+	if got := msg.GetPrecisionOrNumBuckets(); got != 12 {
+		t.Errorf("precision: got %d, want 12", got)
+	}
+	if got := msg.GetSparsePrecisionOrNumBuckets(); got != 17 {
+		t.Errorf("sparse precision: got %d, want 17", got)
+	}
 
-			// init back from proto:
-			subject, err := hllplus.NewFromProto(msg)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(subject.IsSparse()).To(BeTrue())
-			Expect(subject.Precision()).To(BeNumerically("==", 12))
-			Expect(subject.SparsePrecision()).To(BeNumerically("==", 17))
-			Expect(subject.Estimate()).To(BeNumerically("==", 798))
-		})
-	})
-})
+	// expect NO normal representation:
+	if len(msg.GetData()) != 0 {
+		t.Error("expected empty data")
+	}
 
-// --------------------------------------------------------------------
+	// expect sparse representation:
+	// hash/rand collisions are fine, that's why it is != 800
+	if got := msg.GetSparseSize(); got != 796 {
+		t.Errorf("sparse size: got %d, want 796", got)
+	}
+	if len(msg.GetSparseData()) == 0 {
+		t.Error("expected non-empty sparse data")
+	}
 
-func TestSuite(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "zetasketch/hllplus")
+	// init back from proto:
+	restored, err := hllplus.NewFromProto(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !restored.IsSparse() {
+		t.Error("expected sparse representation")
+	}
+	if got := restored.Precision(); got != 12 {
+		t.Errorf("precision: got %d, want 12", got)
+	}
+	if got := restored.SparsePrecision(); got != 17 {
+		t.Errorf("sparse precision: got %d, want 17", got)
+	}
+	if got := restored.Estimate(); got != 798 {
+		t.Errorf("got %d, want 798", got)
+	}
 }
