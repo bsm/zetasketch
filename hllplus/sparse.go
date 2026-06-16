@@ -35,7 +35,10 @@ func newSparseState(normalPrecision, sparsePrecision uint8, state []byte) *spars
 	}
 
 	// restore state from passed data (optional):
-	data := recycleDeltaSlice(maxDataLen)
+	// Allocate lazily with a small initial capacity instead of pre-sizing for the
+	// worst case. The delta slice is append-grown and the buffer is a map, so both
+	// grow on demand. maxDataLen/maxBufferLen are retained below as flush thresholds.
+	data := recycleDeltaSlice(64)
 	data.SetData(state)
 
 	return &sparseState{
@@ -43,7 +46,7 @@ func newSparseState(normalPrecision, sparsePrecision uint8, state []byte) *spars
 		sparsePrecision: sparsePrecision,
 
 		data:   data,
-		buffer: make(uint32Set, maxBufferLen),
+		buffer: make(uint32Set),
 
 		encodedFlag:  encodedFlag,
 		maxDataLen:   maxDataLen,
